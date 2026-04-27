@@ -1,11 +1,11 @@
 import {
   FilesetResolver,
   PoseLandmarker,
-} from "https://esm.sh/@mediapipe/tasks-vision@0.10.21";
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/+esm";
 
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
-const WASM_URL = "https://esm.sh/@mediapipe/tasks-vision@0.10.21/wasm";
+const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm";
 
 let landmarkerPromise = null;
 
