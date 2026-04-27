@@ -6,24 +6,34 @@ import { renderFindings, renderRawSummary, setStatus, triggerPrint } from "./ui/
 import { generateFindings, getDefaultModel } from "./ai/gemini.js";
 
 const VIEWS = ["front", "back", "left", "right"];
-const SETTINGS_KEY = "posture_app_settings_v1";
+const SETTINGS_KEY = "posture_app_settings_v2";
+
+// Hard-coded default proxy URL (Cloudflare Worker that holds the AI API key server-side).
+// Operators can override via the Settings dialog.
+const DEFAULT_PROXY_URL = "https://posture-analysis-proxy.tmk4men.workers.dev";
 
 const state = {
   metricsByView: { front: null, back: null, left: null, right: null },
 };
 
+function defaultSettings() {
+  return {
+    mode: "proxy",
+    provider: "gemini",
+    model: getDefaultModel("gemini"),
+    apiKey: "",
+    proxyUrl: DEFAULT_PROXY_URL,
+  };
+}
+
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { provider: "gemini", model: getDefaultModel("gemini"), apiKey: "" };
+    if (!raw) return defaultSettings();
     const parsed = JSON.parse(raw);
-    return {
-      provider: parsed.provider || "gemini",
-      model: parsed.model || getDefaultModel(parsed.provider || "gemini"),
-      apiKey: parsed.apiKey || "",
-    };
+    return { ...defaultSettings(), ...parsed };
   } catch {
-    return { provider: "gemini", model: getDefaultModel("gemini"), apiKey: "" };
+    return defaultSettings();
   }
 }
 
@@ -69,10 +79,8 @@ async function onAnalyze() {
   };
   const summary = summarizeAll(state.metricsByView);
 
-  if (settings.provider === "none" || !settings.apiKey) {
-    renderRawSummary(
-      "計測値の一覧（AI所見はオフ）:\n\n" + JSON.stringify(summary, null, 2)
-    );
+  if (settings.provider === "none") {
+    renderRawSummary("計測値の一覧（AI所見はオフ）:\n\n" + JSON.stringify(summary, null, 2));
     setStatus("AI所見は無効。計測値のみ表示しました。");
     return;
   }
@@ -111,29 +119,49 @@ function onReset() {
 
 function setupSettingsDialog() {
   const dialog = document.getElementById("settings-dialog");
+  const modeSel = document.getElementById("ai-mode");
   const providerSel = document.getElementById("ai-provider");
   const modelInput = document.getElementById("ai-model");
   const keyInput = document.getElementById("ai-key");
+  const proxyInput = document.getElementById("proxy-url");
+  const proxyField = document.getElementById("proxy-url-field");
+  const apiKeyField = document.getElementById("api-key-field");
   const saveBtn = document.getElementById("settings-save");
+
+  function applyModeVisibility() {
+    if (modeSel.value === "proxy") {
+      proxyField.hidden = false;
+      apiKeyField.hidden = true;
+    } else {
+      proxyField.hidden = true;
+      apiKeyField.hidden = false;
+    }
+  }
 
   document.getElementById("settings-btn").addEventListener("click", () => {
     const s = loadSettings();
+    modeSel.value = s.mode;
     providerSel.value = s.provider;
     modelInput.value = s.model;
     keyInput.value = s.apiKey;
+    proxyInput.value = s.proxyUrl;
+    applyModeVisibility();
     dialog.showModal();
   });
+
+  modeSel.addEventListener("change", applyModeVisibility);
 
   providerSel.addEventListener("change", () => {
     modelInput.value = getDefaultModel(providerSel.value);
   });
 
-  saveBtn.addEventListener("click", (e) => {
-    // Prevent default close so we can save first; dialog still closes via form method=dialog.
+  saveBtn.addEventListener("click", () => {
     saveSettings({
+      mode: modeSel.value,
       provider: providerSel.value,
       model: modelInput.value.trim() || getDefaultModel(providerSel.value),
       apiKey: keyInput.value.trim(),
+      proxyUrl: proxyInput.value.trim(),
     });
   });
 }

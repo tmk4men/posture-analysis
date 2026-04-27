@@ -86,6 +86,13 @@
     <form method="dialog">
       <h2>設定</h2>
       <div class="field">
+        <label for="ai-mode">接続方法</label>
+        <select id="ai-mode">
+          <option value="proxy">プロキシ経由（推奨・APIキー不要）</option>
+          <option value="direct">直接呼び出し（自分のAPIキーを使う）</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="ai-provider">AIプロバイダー</label>
         <select id="ai-provider">
           <option value="gemini">Gemini (Google AI Studio)</option>
@@ -95,10 +102,15 @@
         </select>
       </div>
       <div class="field">
-        <label for="ai-model">モデル名</label>
+        <label for="ai-model">モデル名（任意。空ならデフォルト）</label>
         <input id="ai-model" type="text" placeholder="例: gemini-2.5-flash" />
       </div>
-      <div class="field">
+      <div class="field" id="proxy-url-field">
+        <label for="proxy-url">プロキシURL</label>
+        <input id="proxy-url" type="text" autocomplete="off" placeholder="https://posture-analysis-proxy.xxx.workers.dev" />
+        <small>運用者がCloudflare Workersに設定したURL。通常は変更不要です。</small>
+      </div>
+      <div class="field" id="api-key-field" hidden>
         <label for="ai-key">APIキー（端末ローカル保存）</label>
         <input id="ai-key" type="password" autocomplete="off" />
         <small>ブラウザのlocalStorageに保存されます。共用端末では使用後にクリアしてください。</small>

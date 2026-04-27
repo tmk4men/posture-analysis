@@ -1,5 +1,7 @@
-// Multi-provider AI client. Default provider is Gemini, but the same shape works for
-// OpenAI and Anthropic so the operator can swap by changing one setting.
+// AI client supporting two modes:
+//   - "proxy"  : POST to a Cloudflare Worker that holds the API key (recommended for handover)
+//   - "direct" : call the AI provider's API directly from the browser using the operator's own key
+// Providers supported in both modes: gemini / openai / anthropic.
 
 const SYSTEM_PROMPT = `あなたは整骨院の姿勢分析アシスタントです。
 - 渡される計測値（角度・左右差）は MediaPipe Pose Landmarker による推定値です。誤差を含む可能性があります。
@@ -15,6 +17,16 @@ const SYSTEM_PROMPT = `あなたは整骨院の姿勢分析アシスタントで
 - implications: 放置した場合に起こりうる身体的影響の可能性を3項目以内
 - selfcare: 自宅でできる簡単なストレッチや姿勢意識のポイントを3項目
 - notes: 施術者への申し送りや注意点を1〜2文（不要なら空文字）`;
+
+const DEFAULT_MODELS = {
+  gemini: "gemini-2.5-flash",
+  openai: "gpt-4o-mini",
+  anthropic: "claude-haiku-4-5-20251001",
+};
+
+export function getDefaultModel(provider) {
+  return DEFAULT_MODELS[provider] ?? "";
+}
 
 function buildUserPayload(patient, metricsByView) {
   return {
@@ -34,7 +46,6 @@ function buildUserPayload(patient, metricsByView) {
 
 function tryParseJson(text) {
   if (!text) return null;
-  // Strip code fences if present.
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -42,7 +53,6 @@ function tryParseJson(text) {
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try to extract the first {...} block.
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) {
       try { return JSON.parse(match[0]); } catch {}
@@ -50,6 +60,26 @@ function tryParseJson(text) {
     return null;
   }
 }
+
+// ---- Proxy mode --------------------------------------------------------
+
+async function callProxy({ proxyUrl, provider, model, system, user }) {
+  const url = proxyUrl.replace(/\/$/, "") + "/api/findings";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, model, system, user }),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.json()).error || ""; } catch {}
+    throw new Error(`プロキシエラー ${res.status}: ${detail || (await res.text())}`);
+  }
+  const data = await res.json();
+  return data.text ?? "";
+}
+
+// ---- Direct mode -------------------------------------------------------
 
 async function callGemini({ model, apiKey, system, user }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -59,19 +89,12 @@ async function callGemini({ model, apiKey, system, user }) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: "application/json",
-      },
+      generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
     }),
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API ${res.status}: ${errText}`);
-  }
+  if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
-  return text;
+  return data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
 }
 
 async function callOpenAI({ model, apiKey, system, user }) {
@@ -79,7 +102,7 @@ async function callOpenAI({ model, apiKey, system, user }) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model,
@@ -91,10 +114,7 @@ async function callOpenAI({ model, apiKey, system, user }) {
       ],
     }),
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`OpenAI API ${res.status}: ${errText}`);
-  }
+  if (!res.ok) throw new Error(`OpenAI API ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data?.choices?.[0]?.message?.content ?? "";
 }
@@ -116,48 +136,49 @@ async function callAnthropic({ model, apiKey, system, user }) {
       messages: [{ role: "user", content: user }],
     }),
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Anthropic API ${res.status}: ${errText}`);
-  }
+  if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data?.content?.[0]?.text ?? "";
 }
 
-const DEFAULT_MODELS = {
-  gemini: "gemini-2.5-flash",
-  openai: "gpt-4o-mini",
-  anthropic: "claude-haiku-4-5-20251001",
-};
+// ---- Public entry ------------------------------------------------------
 
-export function getDefaultModel(provider) {
-  return DEFAULT_MODELS[provider] ?? "";
-}
-
-export async function generateFindings({ provider, model, apiKey }, patient, metricsByView) {
+export async function generateFindings(settings, patient, metricsByView) {
+  const { mode, provider } = settings;
   if (provider === "none") {
     return { findings: null, raw: "AIプロバイダーが「使用しない」に設定されています。計測値のみを参照してください。" };
   }
-  if (!apiKey) {
-    throw new Error("APIキーが未設定です。ヘッダーの「設定」から登録してください。");
-  }
-  const usedModel = model || DEFAULT_MODELS[provider];
-  if (!usedModel) throw new Error(`未知のプロバイダーです: ${provider}`);
+  const model = settings.model || DEFAULT_MODELS[provider];
+  if (!model) throw new Error(`未対応のプロバイダー: ${provider}`);
 
-  const userPayload = buildUserPayload(patient, metricsByView);
-  const userText = JSON.stringify(userPayload, null, 2);
+  const userText = JSON.stringify(buildUserPayload(patient, metricsByView), null, 2);
 
   let raw;
-  if (provider === "gemini") {
-    raw = await callGemini({ model: usedModel, apiKey, system: SYSTEM_PROMPT, user: userText });
-  } else if (provider === "openai") {
-    raw = await callOpenAI({ model: usedModel, apiKey, system: SYSTEM_PROMPT, user: userText });
-  } else if (provider === "anthropic") {
-    raw = await callAnthropic({ model: usedModel, apiKey, system: SYSTEM_PROMPT, user: userText });
+  if (mode === "proxy") {
+    if (!settings.proxyUrl) {
+      throw new Error("プロキシURLが未設定です。「設定」で接続方法を確認してください。");
+    }
+    raw = await callProxy({
+      proxyUrl: settings.proxyUrl,
+      provider,
+      model,
+      system: SYSTEM_PROMPT,
+      user: userText,
+    });
   } else {
-    throw new Error(`未対応のプロバイダー: ${provider}`);
+    if (!settings.apiKey) {
+      throw new Error("APIキーが未設定です。「設定」から登録するか、接続方法を「プロキシ経由」にしてください。");
+    }
+    if (provider === "gemini") {
+      raw = await callGemini({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+    } else if (provider === "openai") {
+      raw = await callOpenAI({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+    } else if (provider === "anthropic") {
+      raw = await callAnthropic({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+    } else {
+      throw new Error(`未対応のプロバイダー: ${provider}`);
+    }
   }
 
-  const findings = tryParseJson(raw);
-  return { findings, raw };
+  return { findings: tryParseJson(raw), raw };
 }

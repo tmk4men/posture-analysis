@@ -12,6 +12,9 @@ Thumbs.db
 .env
 .env.local
 
+# Local debug / scratch
+画像/
+
 # Node (if added later)
 node_modules/
 npm-debug.log*

@@ -1,0 +1,12 @@
+name = "posture-analysis-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Restrict CORS to the deployed Pages site.
+[vars]
+ALLOWED_ORIGIN = "https://tmk4men.github.io"
+
+# Secrets are NOT defined here — they are set via:
+#   wrangler secret put GEMINI_API_KEY
+#   wrangler secret put OPENAI_API_KEY      (optional)
+#   wrangler secret put ANTHROPIC_API_KEY   (optional)
