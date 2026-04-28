@@ -57,13 +57,47 @@ async function checkRateLimit(request, env) {
   return true;
 }
 
+// Retry transient upstream failures: 408 / 429 / 500 / 502 / 503 / 504.
+// 3 attempts total, exponential backoff (~500ms, ~1500ms) with jitter.
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+class UpstreamError extends Error {
+  constructor(provider, status, body) {
+    super(`${provider} ${status}: ${body}`);
+    this.provider = provider;
+    this.status = status;
+    this.body = body;
+  }
+}
+
+async function fetchWithRetry(provider, url, init) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+      const text = await res.text();
+      lastErr = new UpstreamError(provider, res.status, text);
+      if (!RETRYABLE_STATUSES.has(res.status)) throw lastErr;
+    } catch (err) {
+      lastErr = err instanceof UpstreamError ? err : new UpstreamError(provider, 0, err.message);
+      if (err instanceof UpstreamError && !RETRYABLE_STATUSES.has(err.status)) throw err;
+    }
+    if (attempt < 2) {
+      const delay = 500 * Math.pow(3, attempt) + Math.random() * 250;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 async function callGemini({ model, system, user, env }) {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured on the worker");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry("Gemini", url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -72,7 +106,6 @@ async function callGemini({ model, system, user, env }) {
       generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
     }),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ?? "";
 }
@@ -80,7 +113,7 @@ async function callGemini({ model, system, user, env }) {
 async function callOpenAI({ model, system, user, env }) {
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured on the worker");
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetchWithRetry("OpenAI", "https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -96,7 +129,6 @@ async function callOpenAI({ model, system, user, env }) {
       ],
     }),
   });
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data?.choices?.[0]?.message?.content ?? "";
 }
@@ -104,7 +136,7 @@ async function callOpenAI({ model, system, user, env }) {
 async function callAnthropic({ model, system, user, env }) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured on the worker");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetchWithRetry("Anthropic", "https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -119,9 +151,29 @@ async function callAnthropic({ model, system, user, env }) {
       messages: [{ role: "user", content: user }],
     }),
   });
-  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data?.content?.[0]?.text ?? "";
+}
+
+function toFriendlyMessage(err) {
+  if (err instanceof UpstreamError) {
+    if (err.status === 503 || err.status === 502 || err.status === 504) {
+      return "AIサービスが現在混雑しています。1〜2分ほど待ってから、もう一度お試しください。";
+    }
+    if (err.status === 429) {
+      return "AIサービスの利用制限に達しました。しばらく待ってから再度お試しください。";
+    }
+    if (err.status === 401 || err.status === 403) {
+      return "AI接続の認証に失敗しました。管理者にAPIキーの設定をご確認ください。";
+    }
+    if (err.status === 400) {
+      return "AIへのリクエスト内容に問題がありました。設定のモデル名をご確認ください。";
+    }
+    if (err.status >= 500) {
+      return "AIサービス側で一時的なエラーが発生しました。少し待って再度お試しください。";
+    }
+  }
+  return err.message || "AI生成中に予期しないエラーが発生しました。";
 }
 
 export default {
@@ -165,7 +217,8 @@ export default {
       else if (provider === "anthropic") text = await callAnthropic({ model, system, user, env });
       return json(200, { text }, env);
     } catch (err) {
-      return json(502, { error: err.message }, env);
+      const status = err instanceof UpstreamError ? err.status || 502 : 502;
+      return json(status, { error: toFriendlyMessage(err) }, env);
     }
   },
 };

@@ -73,7 +73,8 @@ async function callProxy({ proxyUrl, provider, model, system, user }) {
   if (!res.ok) {
     let detail = "";
     try { detail = (await res.json()).error || ""; } catch {}
-    throw new Error(`プロキシエラー ${res.status}: ${detail || (await res.text())}`);
+    if (detail) throw new Error(detail);
+    throw new Error(`プロキシエラー ${res.status}: ${await res.text()}`);
   }
   const data = await res.json();
   return data.text ?? "";
