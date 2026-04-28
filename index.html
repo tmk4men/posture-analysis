@@ -2,126 +2,374 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>姿勢分析ツール</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <title>Postura ── 姿勢を、数字で診る。｜整骨院向け姿勢分析ツール</title>
+  <meta name="description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から所見出力まで3分。整骨院・整体院のためのブラウザ完結の姿勢分析ツールです。" />
+
+  <link rel="canonical" href="https://tmk4men.github.io/posture-analysis/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ja_JP" />
+  <meta property="og:site_name" content="Postura" />
+  <meta property="og:title" content="Postura ── 姿勢を、数字で診る。" />
+  <meta property="og:description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から所見出力まで3分。整骨院のための姿勢分析ツール。" />
+  <meta property="og:url" content="https://tmk4men.github.io/posture-analysis/" />
+  <meta property="og:image" content="https://tmk4men.github.io/posture-analysis/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Postura - 姿勢を、数字で診る" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Postura ── 姿勢を、数字で診る。" />
+  <meta name="twitter:description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。整骨院のための姿勢分析ツール。" />
+  <meta name="twitter:image" content="https://tmk4men.github.io/posture-analysis/og.png" />
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap" />
+
+  <link rel="stylesheet" href="lp.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Postura",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web",
+    "description": "整骨院・整体院向けの姿勢分析Webアプリ。写真4枚から骨格を自動検出し、左右差や前後傾を数値化、AI所見コメントを生成します。",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+    "url": "https://tmk4men.github.io/posture-analysis/"
+  }
+  </script>
 </head>
 <body>
-  <header class="app-header no-print">
-    <h1>姿勢分析ツール</h1>
-    <div class="header-actions">
-      <button id="settings-btn" type="button">設定</button>
-      <button id="reset-btn" type="button">クリア</button>
-      <button id="print-btn" type="button" disabled>レポート印刷</button>
-    </div>
-  </header>
+  <div class="grain" aria-hidden="true"></div>
 
-  <main class="app-main">
-    <section class="patient-info no-print">
-      <div class="field">
-        <label for="patient-name">患者氏名（任意・端末内のみ）</label>
-        <input id="patient-name" type="text" autocomplete="off" placeholder="例：山田 太郎" />
+  <nav class="lp-nav" aria-label="サイトナビゲーション">
+    <a class="brand" href="./" aria-label="Postura ホーム">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="5" r="2.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12 7.5 V14 M8 11 H16 M9.5 22 L12 14 L14.5 22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-name">Postura</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#why">背景</a></li>
+      <li><a href="#features">機能</a></li>
+      <li><a href="#flow">使い方</a></li>
+      <li><a href="#spec">計測項目</a></li>
+      <li><a href="#privacy">プライバシー</a></li>
+    </ul>
+    <a class="nav-cta" href="./app.html">ツールを開く<span aria-hidden="true">→</span></a>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-inner">
+        <div class="hero-text">
+          <p class="eyebrow reveal" data-delay="0">整骨院・整体院のための姿勢分析</p>
+          <h1 id="hero-title" class="hero-title">
+            <span class="reveal" data-delay="80">姿勢を、</span>
+            <span class="reveal accent" data-delay="180">数字で</span><span class="reveal" data-delay="260">診る。</span>
+          </h1>
+          <p class="hero-lead reveal" data-delay="380">
+            写真4枚で、肩・骨盤・頭部の傾きを自動計測。<br />
+            撮影から所見出力まで、およそ3分。
+          </p>
+          <div class="hero-ctas reveal" data-delay="500">
+            <a class="btn btn-primary" href="./app.html">
+              <span>ツールを開く</span>
+              <span class="btn-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="btn btn-ghost" href="#features">機能を見る</a>
+          </div>
+          <ul class="hero-meta reveal" data-delay="640">
+            <li><span class="meta-num">4</span><span class="meta-lbl">方向同時計測</span></li>
+            <li><span class="meta-num">3<span class="meta-unit">分</span></span><span class="meta-lbl">撮影〜所見</span></li>
+            <li><span class="meta-num">100<span class="meta-unit">%</span></span><span class="meta-lbl">端末内で処理</span></li>
+          </ul>
+        </div>
+
+        <div class="hero-figure" aria-hidden="true">
+          <svg class="figure-svg" viewBox="0 0 360 520" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.18"/>
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width="360" height="520" fill="url(#grid)"/>
+
+            <!-- horizontal reference lines -->
+            <line class="ref-line" x1="40" y1="120" x2="320" y2="120" stroke="currentColor" stroke-dasharray="2 4" opacity="0.35"/>
+            <line class="ref-line" x1="40" y1="220" x2="320" y2="220" stroke="currentColor" stroke-dasharray="2 4" opacity="0.35"/>
+            <line class="ref-line" x1="40" y1="340" x2="320" y2="340" stroke="currentColor" stroke-dasharray="2 4" opacity="0.35"/>
+
+            <!-- skeleton -->
+            <g class="skeleton" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <!-- head -->
+              <circle class="draw" cx="180" cy="90" r="26"/>
+              <!-- spine -->
+              <line class="draw" x1="180" y1="116" x2="180" y2="320"/>
+              <!-- shoulders (slightly tilted) -->
+              <line class="draw" x1="124" y1="155" x2="236" y2="148"/>
+              <!-- arms -->
+              <line class="draw" x1="124" y1="155" x2="105" y2="240"/>
+              <line class="draw" x1="105" y1="240" x2="115" y2="320"/>
+              <line class="draw" x1="236" y1="148" x2="258" y2="232"/>
+              <line class="draw" x1="258" y1="232" x2="252" y2="316"/>
+              <!-- hips -->
+              <line class="draw" x1="148" y1="320" x2="216" y2="324"/>
+              <!-- legs -->
+              <line class="draw" x1="148" y1="320" x2="138" y2="420"/>
+              <line class="draw" x1="138" y1="420" x2="132" y2="500"/>
+              <line class="draw" x1="216" y1="324" x2="226" y2="420"/>
+              <line class="draw" x1="226" y1="420" x2="232" y2="500"/>
+            </g>
+
+            <!-- joints -->
+            <g class="joints" fill="currentColor">
+              <circle class="dot" cx="124" cy="155" r="3"/>
+              <circle class="dot" cx="236" cy="148" r="3"/>
+              <circle class="dot" cx="148" cy="320" r="3"/>
+              <circle class="dot" cx="216" cy="324" r="3"/>
+              <circle class="dot" cx="138" cy="420" r="3"/>
+              <circle class="dot" cx="226" cy="420" r="3"/>
+            </g>
+
+            <!-- annotations -->
+            <g class="annotations" font-family="Fraunces, serif" font-size="11" fill="currentColor">
+              <line x1="236" y1="148" x2="320" y2="148" stroke="currentColor" stroke-width="0.8"/>
+              <text x="324" y="151" class="anno-text">3.6°</text>
+
+              <line x1="216" y1="324" x2="320" y2="324" stroke="currentColor" stroke-width="0.8"/>
+              <text x="324" y="327" class="anno-text">2.1°</text>
+
+              <line x1="180" y1="64" x2="40" y2="64" stroke="currentColor" stroke-width="0.8"/>
+              <text x="36" y="67" text-anchor="end" class="anno-text">FHP 12mm</text>
+            </g>
+          </svg>
+          <p class="figure-caption">骨格33点を検出し、左右差を可視化</p>
+        </div>
       </div>
-      <div class="field">
-        <label for="patient-date">撮影日</label>
-        <input id="patient-date" type="date" />
+      <div class="hero-scroll" aria-hidden="true">
+        <span>scroll</span>
+        <span class="scroll-line"></span>
       </div>
-      <label class="consent">
-        <input id="consent-check" type="checkbox" />
-        AIによる所見生成のため、撮影画像と計測値を外部AIに送信することを患者から同意取得済み
-      </label>
     </section>
 
-    <section class="upload-grid">
-      <article class="upload-card" data-view="front">
-        <h2>正面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="front" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="front"></canvas></div>
-        <ul class="metric-list" data-view="front"></ul>
-      </article>
-      <article class="upload-card" data-view="back">
-        <h2>背面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="back" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="back"></canvas></div>
-        <ul class="metric-list" data-view="back"></ul>
-      </article>
-      <article class="upload-card" data-view="left">
-        <h2>左側面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="left" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="left"></canvas></div>
-        <ul class="metric-list" data-view="left"></ul>
-      </article>
-      <article class="upload-card" data-view="right">
-        <h2>右側面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="right" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="right"></canvas></div>
-        <ul class="metric-list" data-view="right"></ul>
-      </article>
+    <!-- WHY -->
+    <section class="section section-why" id="why" aria-labelledby="why-title">
+      <div class="section-marker"><span>01</span><span class="section-marker-label">背景</span></div>
+      <div class="section-body">
+        <h2 id="why-title" class="section-title">
+          主観に頼らない説明を、<br />
+          施術の前に置く。
+        </h2>
+        <div class="why-grid">
+          <p class="why-lead">
+            「猫背気味ですね」「左肩が下がっています」── 経験豊富な施術者ほど、見立てを言葉だけで伝えがちです。
+            患者さんの納得感は、その日の言葉のうまさに左右されてしまう。
+          </p>
+          <p class="why-body">
+            Postura は、施術者の見立てを<em>数字と図</em>で補強するための道具です。
+            撮るのは前後左右の4枚だけ。あとはブラウザが骨格を読み、傾きを度数で出します。
+            会話のたたき台として使えば、説明は短く、納得は深くなります。
+          </p>
+          <ul class="why-list">
+            <li><span class="why-mark" aria-hidden="true">✕</span>言葉だけの説明で、患者さんが「ピンと来ない」</li>
+            <li><span class="why-mark" aria-hidden="true">✕</span>初診と再来でどれだけ変わったか、共有しづらい</li>
+            <li><span class="why-mark" aria-hidden="true">✕</span>市販ツールは月額数千〜数万円、機能も過多</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
-    <section class="summary-section">
-      <div class="summary-actions no-print">
-        <button id="analyze-btn" type="button" disabled>AI所見を生成</button>
-        <span id="status-text" class="status-text"></span>
+    <!-- FEATURES -->
+    <section class="section section-features" id="features" aria-labelledby="features-title">
+      <div class="section-marker"><span>02</span><span class="section-marker-label">機能</span></div>
+      <div class="section-body">
+        <h2 id="features-title" class="section-title">
+          道具としての、<br />
+          ちょうどいい解像度。
+        </h2>
+        <p class="section-lead">専門ソフトのコピーではなく、現場で毎日3分で済ませるための機能だけを残しました。</p>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 36 36" width="36" height="36"><rect x="3" y="9" width="14" height="18" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="19" y="9" width="14" height="18" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="14" x2="10" y2="22" stroke="currentColor" stroke-width="1.2"/><line x1="26" y1="14" x2="26" y2="22" stroke="currentColor" stroke-width="1.2"/><circle cx="10" cy="14" r="1.4" fill="currentColor"/><circle cx="26" cy="14" r="1.4" fill="currentColor"/></svg>
+            </div>
+            <h3>4方向の同時計測</h3>
+            <p>正面・背面・左右側面の写真を並べて、それぞれに骨格線と基準線を自動描画。一画面で前後傾と左右差をまとめて確認できます。</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 36 36" width="36" height="36"><path d="M6 18 L18 6 L30 18 L18 30 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="18" cy="18" r="4" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="18" x2="6" y2="18" stroke="currentColor" stroke-width="1.2"/><line x1="24" y1="18" x2="30" y2="18" stroke="currentColor" stroke-width="1.2"/></svg>
+            </div>
+            <h3>写真はブラウザ内で完結</h3>
+            <p>骨格検出は MediaPipe をブラウザ内で動かしているので、写真自体はサーバーに送信されません。患者情報の取り扱いをシンプルに保てます。</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 36 36" width="36" height="36"><path d="M8 8 H24 L28 12 V28 H8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="24" x2="20" y2="24" stroke="currentColor" stroke-width="1.2"/></svg>
+            </div>
+            <h3>所見コメントの下書き</h3>
+            <p>計測値だけを AI に渡して、所見・身体への影響・セルフケア提案の下書きを生成。<em>叩き台として</em>使い、施術者がその場で言葉を整えてください。</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 36 36" width="36" height="36"><rect x="7" y="6" width="22" height="24" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="12" x2="25" y2="12" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="20" x2="21" y2="20" stroke="currentColor" stroke-width="1.2"/><circle cx="13" cy="25" r="1.4" fill="currentColor"/><line x1="17" y1="25" x2="25" y2="25" stroke="currentColor" stroke-width="1.2"/></svg>
+            </div>
+            <h3>A4レポート印刷</h3>
+            <p>4方向の写真と所見をそのまま A4 で印刷。患者さんがその場で持ち帰れる紙の説明資料が、ボタンひとつで出ます。</p>
+          </article>
+        </div>
       </div>
-      <div id="summary-output" class="summary-output">
-        <p class="placeholder">写真をアップロードし「AI所見を生成」を押してください。</p>
+    </section>
+
+    <!-- FLOW -->
+    <section class="section section-flow" id="flow" aria-labelledby="flow-title">
+      <div class="section-marker"><span>03</span><span class="section-marker-label">使い方</span></div>
+      <div class="section-body">
+        <h2 id="flow-title" class="section-title">3分で、初診カウンセリングが終わる。</h2>
+
+        <ol class="flow-steps">
+          <li class="flow-step">
+            <span class="flow-num">01</span>
+            <h3 class="flow-h">撮る</h3>
+            <p>2〜3メートル離れて、患者さんの全身を前後左右から撮影。背景はシンプルに、服はシルエットがわかる軽装で。</p>
+            <div class="flow-illust" aria-hidden="true">
+              <svg viewBox="0 0 200 120"><rect x="20" y="20" width="60" height="80" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="50" cy="40" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="50" y1="46" x2="50" y2="80" stroke="currentColor" stroke-width="1.2"/><line x1="42" y1="60" x2="58" y2="60" stroke="currentColor" stroke-width="1.2"/><path d="M120 60 L160 50 L160 70 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="170" cy="60" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="170" cy="60" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </div>
+          </li>
+          <li class="flow-step">
+            <span class="flow-num">02</span>
+            <h3 class="flow-h">読み込ませる</h3>
+            <p>4枚を順にアップロード。自動で骨格と基準線を描画し、肩・骨盤・頭部の傾きを度数で表示します。</p>
+            <div class="flow-illust" aria-hidden="true">
+              <svg viewBox="0 0 200 120"><rect x="20" y="20" width="60" height="80" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="50" cy="40" r="6" fill="currentColor"/><line x1="50" y1="46" x2="50" y2="80" stroke="currentColor" stroke-width="1.2"/><line x1="40" y1="58" x2="60" y2="56" stroke="currentColor" stroke-width="1.2"/><line x1="44" y1="80" x2="56" y2="82" stroke="currentColor" stroke-width="1.2"/><path d="M100 60 L130 60" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/><polyline points="124,55 130,60 124,65" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="140" y="32" width="50" height="56" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="146" y1="44" x2="184" y2="44" stroke="currentColor" stroke-width="0.8"/><line x1="146" y1="52" x2="184" y2="52" stroke="currentColor" stroke-width="0.8"/><line x1="146" y1="60" x2="174" y2="60" stroke="currentColor" stroke-width="0.8"/><line x1="146" y1="68" x2="184" y2="68" stroke="currentColor" stroke-width="0.8"/><line x1="146" y1="76" x2="170" y2="76" stroke="currentColor" stroke-width="0.8"/></svg>
+            </div>
+          </li>
+          <li class="flow-step">
+            <span class="flow-num">03</span>
+            <h3 class="flow-h">渡す</h3>
+            <p>所見を確認して、必要なら一言添えてA4に印刷。患者さんの手元に、その日の状態を持ち帰っていただけます。</p>
+            <div class="flow-illust" aria-hidden="true">
+              <svg viewBox="0 0 200 120"><rect x="30" y="20" width="60" height="80" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="38" y1="34" x2="82" y2="34" stroke="currentColor" stroke-width="0.8"/><line x1="38" y1="44" x2="82" y2="44" stroke="currentColor" stroke-width="0.8"/><line x1="38" y1="54" x2="68" y2="54" stroke="currentColor" stroke-width="0.8"/><rect x="40" y="64" width="40" height="28" fill="none" stroke="currentColor" stroke-width="0.8"/><path d="M110 60 L150 60" stroke="currentColor" stroke-width="1.2"/><polyline points="144,55 150,60 144,65" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="170" cy="60" r="20" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M162 60 L168 66 L178 54" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- SPEC -->
+    <section class="section section-spec" id="spec" aria-labelledby="spec-title">
+      <div class="section-marker"><span>04</span><span class="section-marker-label">計測項目</span></div>
+      <div class="section-body">
+        <h2 id="spec-title" class="section-title">何を、どう測っているか。</h2>
+        <p class="section-lead">
+          骨格は MediaPipe Pose Landmarker（Google提供）が検出する33点の座標を使います。
+          そこから施術判断に使いやすい角度だけを抜粋して表示しています。
+        </p>
+
+        <div class="spec-table">
+          <div class="spec-row spec-head">
+            <div>視点</div>
+            <div>計測項目</div>
+            <div>単位</div>
+          </div>
+          <div class="spec-row">
+            <div class="spec-view">正面 / 背面</div>
+            <div>肩の傾き、骨盤の傾き、頭部の傾き、上半身の左右シフト</div>
+            <div class="spec-unit">度 / mm</div>
+          </div>
+          <div class="spec-row">
+            <div class="spec-view">左側面 / 右側面</div>
+            <div>頭部前方位（FHP）、肩の前方変位、体幹の前後傾、膝の角度</div>
+            <div class="spec-unit">度 / mm</div>
+          </div>
+        </div>
+
+        <p class="section-fineprint">
+          計測値は左右差や前後傾を客観的に把握する補助です。<em>医学的診断ではありません</em>。
+          施術判断は必ず有資格者が行ってください。
+        </p>
+      </div>
+    </section>
+
+    <!-- PRIVACY -->
+    <section class="section section-privacy" id="privacy" aria-labelledby="privacy-title">
+      <div class="section-marker"><span>05</span><span class="section-marker-label">プライバシー</span></div>
+      <div class="section-body">
+        <h2 id="privacy-title" class="section-title">写真は、<br />外に出ません。</h2>
+        <div class="privacy-body">
+          <ul class="privacy-list">
+            <li>
+              <span class="privacy-tag">写真</span>
+              <p>骨格検出はブラウザ内で完結。サーバーには一度も送信されません。</p>
+            </li>
+            <li>
+              <span class="privacy-tag">所見生成</span>
+              <p>AIには<em>計測値の数値だけ</em>を渡します。画像も氏名も送りません。</p>
+            </li>
+            <li>
+              <span class="privacy-tag">同意取得</span>
+              <p>所見生成を使う場合は、患者さんからの同意取得チェックを必須にしています。</p>
+            </li>
+            <li>
+              <span class="privacy-tag">APIキー</span>
+              <p>運用側のキーはサーバー側で秘匿。各院・各端末でのキー入力は不要です。</p>
+            </li>
+          </ul>
+          <div class="privacy-figure" aria-hidden="true">
+            <svg viewBox="0 0 240 240"><circle cx="120" cy="120" r="100" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="120" cy="120" r="74" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><rect x="96" y="108" width="48" height="44" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M104 108 V96 a16 16 0 0 1 32 0 V108" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="120" cy="128" r="3.5" fill="currentColor"/><line x1="120" y1="131" x2="120" y2="140" stroke="currentColor" stroke-width="1.4"/></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section-cta">
+      <div class="cta-inner">
+        <p class="cta-eyebrow">First, a photo.</p>
+        <h2 class="cta-title">
+          まずは、<br />ご自身の写真で。
+        </h2>
+        <p class="cta-lead">
+          試すのにアカウント登録もインストールも要りません。<br />
+          ブラウザを開いて、写真を1枚アップロードするだけで動きます。
+        </p>
+        <a class="btn btn-primary btn-lg" href="./app.html">
+          <span>ツールを開く</span>
+          <span class="btn-arrow" aria-hidden="true">→</span>
+        </a>
+        <p class="cta-fineprint">推奨環境：Chrome / Edge / Safari の最新版（PC・タブレット・スマートフォン）</p>
       </div>
     </section>
   </main>
 
-  <dialog id="settings-dialog" class="settings-dialog">
-    <form method="dialog">
-      <h2>設定</h2>
-      <div class="field">
-        <label for="ai-mode">接続方法</label>
-        <select id="ai-mode">
-          <option value="proxy">プロキシ経由（推奨・APIキー不要）</option>
-          <option value="direct">直接呼び出し（自分のAPIキーを使う）</option>
-        </select>
+  <footer class="lp-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="5" r="2.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12 7.5 V14 M8 11 H16 M9.5 22 L12 14 L14.5 22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>Postura</span>
       </div>
-      <div class="field">
-        <label for="ai-provider">AIプロバイダー</label>
-        <select id="ai-provider">
-          <option value="gemini">Gemini (Google AI Studio)</option>
-          <option value="openai">OpenAI (ChatGPT API)</option>
-          <option value="anthropic">Anthropic (Claude API)</option>
-          <option value="none">使用しない（計測値のみ表示）</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="ai-model">モデル名（任意。空ならデフォルト）</label>
-        <input id="ai-model" type="text" placeholder="例: gemini-2.5-flash" />
-      </div>
-      <div class="field" id="proxy-url-field">
-        <label for="proxy-url">プロキシURL</label>
-        <input id="proxy-url" type="text" autocomplete="off" placeholder="https://posture-analysis-proxy.xxx.workers.dev" />
-        <small>運用者がCloudflare Workersに設定したURL。通常は変更不要です。</small>
-      </div>
-      <div class="field" id="api-key-field" hidden>
-        <label for="ai-key">APIキー（端末ローカル保存）</label>
-        <input id="ai-key" type="password" autocomplete="off" />
-        <small>ブラウザのlocalStorageに保存されます。共用端末では使用後にクリアしてください。</small>
-      </div>
-      <div class="dialog-actions">
-        <button value="cancel">キャンセル</button>
-        <button id="settings-save" value="save">保存</button>
-      </div>
-    </form>
-  </dialog>
+      <p class="footer-note">
+        本ツールは医療機器ではなく、計測値・所見コメントは医学的診断ではありません。
+        施術判断は必ず有資格者が行ってください。
+      </p>
+      <p class="footer-meta">© 2026 Postura ── 整骨院・整体院向けの姿勢分析ツール</p>
+    </div>
+  </footer>
 
-  <script type="module" src="src/main.js"></script>
+  <script src="lp.js" defer></script>
 </body>
 </html>

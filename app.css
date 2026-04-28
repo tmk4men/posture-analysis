@@ -37,6 +37,16 @@ html, body {
 
 .header-actions { display: flex; gap: 0.5rem; }
 
+.app-back {
+  color: white;
+  text-decoration: none;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-right: auto;
+  padding-right: 1rem;
+}
+.app-back:hover { opacity: 1; }
+
 button {
   padding: 0.45rem 0.9rem;
   border: 1px solid var(--border);

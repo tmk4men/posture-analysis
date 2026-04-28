@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>姿勢分析ツール｜Postura</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header class="app-header no-print">
+    <a class="app-back" href="./">← トップへ戻る</a>
+    <h1>姿勢分析ツール</h1>
+    <div class="header-actions">
+      <button id="settings-btn" type="button">設定</button>
+      <button id="reset-btn" type="button">クリア</button>
+      <button id="print-btn" type="button" disabled>レポート印刷</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="patient-info no-print">
+      <div class="field">
+        <label for="patient-name">患者氏名（任意・端末内のみ）</label>
+        <input id="patient-name" type="text" autocomplete="off" placeholder="例：山田 太郎" />
+      </div>
+      <div class="field">
+        <label for="patient-date">撮影日</label>
+        <input id="patient-date" type="date" />
+      </div>
+      <label class="consent">
+        <input id="consent-check" type="checkbox" />
+        AIによる所見生成のため、撮影画像と計測値を外部AIに送信することを患者から同意取得済み
+      </label>
+    </section>
+
+    <section class="upload-grid">
+      <article class="upload-card" data-view="front">
+        <h2>正面</h2>
+        <label class="dropzone">
+          <input type="file" accept="image/*" data-view="front" />
+          <span class="dropzone-hint">タップして写真を選択</span>
+        </label>
+        <div class="canvas-wrap"><canvas data-view="front"></canvas></div>
+        <ul class="metric-list" data-view="front"></ul>
+      </article>
+      <article class="upload-card" data-view="back">
+        <h2>背面</h2>
+        <label class="dropzone">
+          <input type="file" accept="image/*" data-view="back" />
+          <span class="dropzone-hint">タップして写真を選択</span>
+        </label>
+        <div class="canvas-wrap"><canvas data-view="back"></canvas></div>
+        <ul class="metric-list" data-view="back"></ul>
+      </article>
+      <article class="upload-card" data-view="left">
+        <h2>左側面</h2>
+        <label class="dropzone">
+          <input type="file" accept="image/*" data-view="left" />
+          <span class="dropzone-hint">タップして写真を選択</span>
+        </label>
+        <div class="canvas-wrap"><canvas data-view="left"></canvas></div>
+        <ul class="metric-list" data-view="left"></ul>
+      </article>
+      <article class="upload-card" data-view="right">
+        <h2>右側面</h2>
+        <label class="dropzone">
+          <input type="file" accept="image/*" data-view="right" />
+          <span class="dropzone-hint">タップして写真を選択</span>
+        </label>
+        <div class="canvas-wrap"><canvas data-view="right"></canvas></div>
+        <ul class="metric-list" data-view="right"></ul>
+      </article>
+    </section>
+
+    <section class="summary-section">
+      <div class="summary-actions no-print">
+        <button id="analyze-btn" type="button" disabled>AI所見を生成</button>
+        <span id="status-text" class="status-text"></span>
+      </div>
+      <div id="summary-output" class="summary-output">
+        <p class="placeholder">写真をアップロードし「AI所見を生成」を押してください。</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settings-dialog" class="settings-dialog">
+    <form method="dialog">
+      <h2>設定</h2>
+      <div class="field">
+        <label for="ai-mode">接続方法</label>
+        <select id="ai-mode">
+          <option value="proxy">プロキシ経由（推奨・APIキー不要）</option>
+          <option value="direct">直接呼び出し（自分のAPIキーを使う）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ai-provider">AIプロバイダー</label>
+        <select id="ai-provider">
+          <option value="gemini">Gemini (Google AI Studio)</option>
+          <option value="openai">OpenAI (ChatGPT API)</option>
+          <option value="anthropic">Anthropic (Claude API)</option>
+          <option value="none">使用しない（計測値のみ表示）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ai-model">モデル名（任意。空ならデフォルト）</label>
+        <input id="ai-model" type="text" placeholder="例: gemini-2.5-flash" />
+      </div>
+      <div class="field" id="proxy-url-field">
+        <label for="proxy-url">プロキシURL</label>
+        <input id="proxy-url" type="text" autocomplete="off" placeholder="https://posture-analysis-proxy.xxx.workers.dev" />
+        <small>運用者がCloudflare Workersに設定したURL。通常は変更不要です。</small>
+      </div>
+      <div class="field" id="api-key-field" hidden>
+        <label for="ai-key">APIキー（端末ローカル保存）</label>
+        <input id="ai-key" type="password" autocomplete="off" />
+        <small>ブラウザのlocalStorageに保存されます。共用端末では使用後にクリアしてください。</small>
+      </div>
+      <div class="dialog-actions">
+        <button value="cancel">キャンセル</button>
+        <button id="settings-save" value="save">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
