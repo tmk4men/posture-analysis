@@ -60,11 +60,86 @@ async function handleImage(view, img) {
     state.metricsByView[view] = metrics;
     renderMetrics(view, metrics);
     setStatus(landmarks ? `${viewLabel(view)} 完了` : `${viewLabel(view)} で骨格を検出できませんでした`);
+    updateCarouselDots();
+    if (landmarks) {
+      setTimeout(() => advanceCarousel(view), 550);
+    }
   } catch (err) {
     console.error(err);
     setStatus(`エラー: ${err.message}`);
   }
   refreshAnalyzeButton();
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 720px)").matches;
+}
+
+function advanceCarousel(currentView) {
+  if (!isMobileViewport()) return;
+  const startIdx = VIEWS.indexOf(currentView);
+  if (startIdx < 0) return;
+  for (let offset = 1; offset < VIEWS.length; offset++) {
+    const nextView = VIEWS[(startIdx + offset) % VIEWS.length];
+    if (state.metricsByView[nextView] === null) {
+      scrollToCard(nextView);
+      return;
+    }
+  }
+}
+
+function scrollToCard(view) {
+  const card = document.querySelector(`.upload-card[data-view="${view}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+}
+
+function updateCarouselDots() {
+  const dots = document.querySelectorAll("#carousel-dots .dot");
+  dots.forEach((dot) => {
+    const v = dot.dataset.view;
+    dot.classList.toggle("filled", state.metricsByView[v] !== null);
+  });
+}
+
+function setupCarouselTracking() {
+  const grid = document.querySelector(".upload-grid");
+  const dots = Array.from(document.querySelectorAll("#carousel-dots .dot"));
+  if (!grid || !dots.length) return;
+
+  function setActive(view) {
+    dots.forEach((d) => d.classList.toggle("active", d.dataset.view === view));
+  }
+  setActive("front");
+
+  let scrollRaf = 0;
+  grid.addEventListener("scroll", () => {
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => {
+      scrollRaf = 0;
+      const center = grid.scrollLeft + grid.clientWidth / 2;
+      let bestView = null;
+      let bestDist = Infinity;
+      for (const v of VIEWS) {
+        const card = grid.querySelector(`.upload-card[data-view="${v}"]`);
+        if (!card) continue;
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const dist = Math.abs(cardCenter - center);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestView = v;
+        }
+      }
+      if (bestView) setActive(bestView);
+    });
+  });
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      if (!isMobileViewport()) return;
+      scrollToCard(dot.dataset.view);
+    });
+  });
 }
 
 function viewLabel(view) {
@@ -80,18 +155,18 @@ async function onAnalyze() {
   const summary = summarizeAll(state.metricsByView);
 
   if (settings.provider === "none") {
-    renderRawSummary("計測値の一覧（AI所見はオフ）:\n\n" + JSON.stringify(summary, null, 2));
-    setStatus("AI所見は無効。計測値のみ表示しました。");
+    renderRawSummary("計測値の一覧（AIオフ・計測値のみ）:\n\n" + JSON.stringify(summary, null, 2));
+    setStatus("計測値のみ表示しました。");
     return;
   }
 
-  setStatus("AI所見を生成中…");
+  setStatus("解析結果を生成中…");
   document.getElementById("analyze-btn").disabled = true;
   try {
     const { findings, raw } = await generateFindings(settings, patient, summary);
     if (findings) {
       renderFindings(findings);
-      setStatus("AI所見を生成しました");
+      setStatus("解析結果を生成しました");
     } else {
       renderRawSummary(`AI出力をJSONとして解析できませんでした。生レスポンス:\n\n${raw}`);
       setStatus("AI出力の解析に失敗（生レスポンスを表示）");
@@ -111,10 +186,11 @@ function onReset() {
     resetUpload(v);
     state.metricsByView[v] = null;
   }
-  document.getElementById("summary-output").innerHTML =
-    `<p class="placeholder">写真をアップロードし「AI所見を生成」を押してください。</p>`;
+  document.getElementById("summary-output").innerHTML = "";
   setStatus("");
   refreshAnalyzeButton();
+  updateCarouselDots();
+  scrollToCard("front");
 }
 
 function setupSettingsDialog() {
@@ -179,6 +255,7 @@ function init() {
   document.getElementById("print-btn").addEventListener("click", triggerPrint);
 
   setupSettingsDialog();
+  setupCarouselTracking();
 
   setStatus("MediaPipe モデルを読み込み中…");
   warmup()
