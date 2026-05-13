@@ -2,7 +2,7 @@ import { detectPose, warmup } from "./pose/detector.js";
 import { computeMetrics, summarizeAll } from "./pose/angles.js";
 import { setupUpload, resetUpload } from "./ui/upload.js";
 import { drawPoseOnCanvas, renderMetrics } from "./ui/overlay.js";
-import { renderFindings, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js";
+import { renderReport, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js";
 import { generateFindings, getDefaultModel } from "./ai/gemini.js";
 
 const VIEWS = ["front", "back", "left", "right"];
@@ -146,6 +146,18 @@ function viewLabel(view) {
   return { front: "正面", back: "背面", left: "左側面", right: "右側面" }[view];
 }
 
+// Capture each view's canvas as a data URL so the report can embed the photo.
+function captureCanvasPhotos() {
+  const out = {};
+  for (const view of VIEWS) {
+    const canvas = document.querySelector(`.upload-card[data-view="${view}"] canvas`);
+    if (canvas && canvas.width > 0 && canvas.height > 0) {
+      try { out[view] = canvas.toDataURL("image/jpeg", 0.85); } catch { /* tainted canvas */ }
+    }
+  }
+  return out;
+}
+
 async function onAnalyze() {
   const settings = loadSettings();
   const patient = {
@@ -165,7 +177,8 @@ async function onAnalyze() {
   try {
     const { findings, raw } = await generateFindings(settings, patient, summary);
     if (findings) {
-      renderFindings(findings);
+      const photos = captureCanvasPhotos();
+      renderReport({ findings, patient, photos });
       setStatus("解析結果を生成しました");
     } else {
       renderRawSummary(`AI出力をJSONとして解析できませんでした。生レスポンス:\n\n${raw}`);

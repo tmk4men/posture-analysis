@@ -3,20 +3,53 @@
 //   - "direct" : call the AI provider's API directly from the browser using the operator's own key
 // Providers supported in both modes: gemini / openai / anthropic.
 
-const SYSTEM_PROMPT = `あなたは整骨院の姿勢分析アシスタントです。
-- 渡される計測値（角度・左右差）は MediaPipe Pose Landmarker による推定値です。誤差を含む可能性があります。
-- 医学的診断は行いません。観察された姿勢の傾向と、一般的に推奨されるセルフケアを患者向けの平易な日本語で述べてください。
-- 出力は必ず以下の JSON フォーマットだけを返してください（説明文・コードフェンスは禁止）。
+import { MUSCLES, muscleIds } from "../data/muscles.js";
+import { MACHINES, machineIds } from "../data/machines.js";
+
+const MUSCLE_TABLE = MUSCLES.map(
+  (m) => `- id: "${m.id}"  label: "${m.label}"  side: ${m.side}`
+).join("\n");
+
+const MACHINE_TABLE = MACHINES.map(
+  (m) => `- id: "${m.id}"  label: "${m.label}"  対象: ${m.targets.join("/")}`
+).join("\n");
+
+const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートを作成するアシスタントです。
+
+【入力】
+渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
+
+【出力ルール】
+必ず以下の JSON フォーマットのみを返してください（説明文・コードフェンス禁止）。
 {
-  "observations": ["..."],
-  "implications": ["..."],
-  "selfcare": ["..."],
-  "notes": "..."
+  "diagnosis": "...",
+  "weakMuscles": [ { "id": "...", "note": "..." } ],
+  "tightMuscles": [ { "id": "...", "note": "..." } ],
+  "trainingPlan": [
+    { "machineId": "...", "purpose": "...", "sets": "...", "reps": "...", "points": ["..."] }
+  ]
 }
-- observations: 計測値から読み取れる姿勢の特徴を3〜5項目
-- implications: 放置した場合に起こりうる身体的影響の可能性を3項目以内
-- selfcare: 自宅でできる簡単なストレッチや姿勢意識のポイントを3項目
-- notes: 施術者への申し送りや注意点を1〜2文（不要なら空文字）`;
+
+各フィールド要件：
+- diagnosis: 計測値から読み取れる姿勢の特徴と影響を、患者向けに平易な日本語で 3〜4文。参考例「この方は、頭がやや前に出やすく、首の前傾や肩の巻き込み、背中の丸まり傾向が見られます。…」
+- weakMuscles: 鍛えるべき筋肉。下記筋肉カタログの id から 2〜5個 選択。note には「なぜ弱化しているか／鍛える狙い」を15文字程度。
+- tightMuscles: ほぐすべき筋肉。同じく id から 2〜5個 選択。note には「なぜ硬くなっているか／ほぐす狙い」を15文字程度。
+- trainingPlan: 必ず ちょうど4種目。下記マシンカタログの id から選択。週2回固定で実施する前提。
+  - purpose: そのマシンを採用する狙い（例「肩甲骨を寄せる」「体幹安定」）
+  - sets: 例「10回 × 2セット」
+  - reps: 例「軽い重さでOK」など補足。空文字でも可。
+  - points: 運動のポイントを2〜3個、簡潔に。
+
+【利用可能な筋肉カタログ（idと部位）】
+${MUSCLE_TABLE}
+
+【利用可能なマシンカタログ（id・名称・対象部位）】
+${MACHINE_TABLE}
+
+注意：
+- 筋肉idは weakMuscles と tightMuscles で重複させない。
+- マシンidは trainingPlan 内で重複させない。
+- 計測値が乏しい場合でも、典型的な姿勢パターンから一般的な推奨を返してください。`;
 
 const DEFAULT_MODELS = {
   gemini: "gemini-2.5-flash",
@@ -59,6 +92,39 @@ function tryParseJson(text) {
     }
     return null;
   }
+}
+
+// Normalise AI output and drop entries whose id is not in the catalogue.
+function sanitizeFindings(parsed) {
+  if (!parsed || typeof parsed !== "object") return null;
+  const validMuscleIds = new Set(muscleIds());
+  const validMachineIds = new Set(machineIds());
+
+  const filterMuscles = (arr) =>
+    Array.isArray(arr)
+      ? arr
+          .filter((x) => x && typeof x.id === "string" && validMuscleIds.has(x.id))
+          .map((x) => ({ id: x.id, note: String(x.note ?? "") }))
+      : [];
+
+  const trainingPlan = Array.isArray(parsed.trainingPlan)
+    ? parsed.trainingPlan
+        .filter((x) => x && typeof x.machineId === "string" && validMachineIds.has(x.machineId))
+        .map((x) => ({
+          machineId: x.machineId,
+          purpose: String(x.purpose ?? ""),
+          sets: String(x.sets ?? ""),
+          reps: String(x.reps ?? ""),
+          points: Array.isArray(x.points) ? x.points.map(String).slice(0, 4) : [],
+        }))
+    : [];
+
+  return {
+    diagnosis: String(parsed.diagnosis ?? ""),
+    weakMuscles: filterMuscles(parsed.weakMuscles),
+    tightMuscles: filterMuscles(parsed.tightMuscles),
+    trainingPlan,
+  };
 }
 
 // ---- Proxy mode --------------------------------------------------------
@@ -131,7 +197,7 @@ async function callAnthropic({ model, apiKey, system, user }) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1024,
+      max_tokens: 2048,
       temperature: 0.4,
       system,
       messages: [{ role: "user", content: user }],
@@ -181,5 +247,7 @@ export async function generateFindings(settings, patient, metricsByView) {
     }
   }
 
-  return { findings: tryParseJson(raw), raw };
+  const parsed = tryParseJson(raw);
+  const findings = sanitizeFindings(parsed);
+  return { findings, raw };
 }

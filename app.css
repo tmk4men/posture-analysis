@@ -471,18 +471,324 @@ button {
 /* Hide carousel dots on desktop */
 .carousel-dots { display: none; }
 
-/* ---------- Print ---------- */
+/* ---------- A4 Report ---------- */
+/* The summary-output is now a container of <article class="report-page"> sized to A4.
+   210mm × 297mm at 96dpi ≈ 794px × 1123px. */
+.summary-output { min-height: 1rem; }
+.summary-output:empty { display: none; }
+.summary-output .empty-state { color: var(--muted); padding: 1rem 0; }
+.summary-output .raw-summary {
+  white-space: pre-wrap;
+  background: #f7f8fb;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.report-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 1.4rem auto;
+  padding: 14mm 14mm 12mm;
+  background: #fff;
+  color: #1f2a36;
+  box-shadow: 0 4px 22px rgba(15, 30, 45, 0.12);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  font-size: 11pt;
+  line-height: 1.55;
+  page-break-after: always;
+  break-after: page;
+}
+.report-page:last-child { page-break-after: auto; break-after: auto; }
+
+.report-head {
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.9rem;
+  position: relative;
+}
+.report-head__brand {
+  font-size: 10pt;
+  letter-spacing: 0.22em;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.report-head__brand span {
+  margin-left: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  font-weight: 500;
+}
+.report-head__title {
+  margin: 0.25rem 0 0.25rem;
+  font-size: 18pt;
+  font-weight: 700;
+  color: var(--primary-dark);
+  letter-spacing: 0.06em;
+}
+.report-head__meta {
+  display: flex;
+  gap: 1.2rem;
+  font-size: 10pt;
+  color: var(--muted);
+}
+.report-head__meta b { color: var(--text); }
+.report-head__lead {
+  margin: 0.3rem 0 0;
+  font-size: 10pt;
+  color: var(--muted);
+}
+.report-head--green {
+  border-bottom-color: #2e6b3a;
+}
+.report-head--green .report-head__brand,
+.report-head--green .report-head__title { color: #1f4d27; }
+
+/* ===== Page 1 layout ===== */
+.report-page1-body {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.report-photo {
+  position: relative;
+  background: #f7f4ef;
+  border: 1px solid #d8cdb9;
+  border-radius: 6px;
+  overflow: hidden;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.report-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-height: 360px;
+  background: #fff;
+}
+.report-photo__placeholder {
+  color: #8a7858;
+  font-size: 11pt;
+  padding: 1.4rem;
+}
+.report-photo__caption {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.6rem;
+  background: rgba(15, 58, 58, 0.78);
+  color: #fff;
+  padding: 0.18rem 0.55rem;
+  font-size: 9pt;
+  letter-spacing: 0.12em;
+  border-radius: 4px;
+}
+
+.report-right { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.report-diagnosis {
+  font-size: 10.5pt;
+  color: #2a3540;
+  line-height: 1.65;
+  background: #fbf8f3;
+  border-left: 3px solid var(--accent);
+  padding: 0.55rem 0.8rem;
+  border-radius: 0 4px 4px 0;
+}
+.report-diagnosis p { margin: 0.15rem 0; }
+
+/* Anatomy panel */
+.anatomy-panel {
+  border: 1px solid #e5dccb;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem 0.5rem;
+  background: #fffaf2;
+}
+.anatomy-views {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.anatomy-view { display: flex; justify-content: center; }
+.anatomy-svg {
+  width: 100%;
+  height: auto;
+  max-height: 270px;
+}
+.anatomy-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.4rem;
+  margin-top: 0.25rem;
+  font-size: 9pt;
+  color: var(--muted);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.legend-swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.legend-swatch.swatch-weak { background: #3b8a4f; }
+.legend-swatch.swatch-tight { background: #d97a26; }
+
+/* Muscle lists (鍛/ほぐ) */
+.muscle-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+}
+.muscle-list { border-radius: 6px; padding: 0.5rem 0.6rem; }
+.muscle-list--weak  { background: #ecf6ef; border: 1px solid #c9e2cf; }
+.muscle-list--tight { background: #fbf0e2; border: 1px solid #ecd2ab; }
+.muscle-list header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 10pt;
+  font-weight: 700;
+}
+.muscle-list--weak  header .muscle-list__icon { color: #2c7a3e; }
+.muscle-list--tight header .muscle-list__icon { color: #b85e15; }
+.muscle-list__title { color: #1f2a36; }
+.muscle-list__sub  { color: var(--muted); font-weight: 500; font-size: 8.5pt; margin-left: 0.2rem; }
+.muscle-list ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.32rem; }
+.muscle-card {
+  background: #fff;
+  border: 1px solid #e0d8c8;
+  border-radius: 4px;
+  padding: 0.32rem 0.55rem;
+}
+.muscle-card__label { font-weight: 600; font-size: 9.5pt; color: #1f2a36; }
+.muscle-card__note  { font-size: 8.8pt; color: #5a6878; margin-top: 0.08rem; line-height: 1.4; }
+.muscle-card--weak  { border-left: 3px solid #3b8a4f; }
+.muscle-card--tight { border-left: 3px solid #d97a26; }
+.muscle-card--empty { color: var(--muted); text-align: center; padding: 0.5rem; }
+
+.report-foot {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #d6cfbf;
+  color: #8a7858;
+  font-size: 8.5pt;
+}
+
+/* ===== Page 2 layout (training plan) ===== */
+.training-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  flex: 1;
+}
+.training-card {
+  border: 1px solid #d6e2d8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.6rem 0.7rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  break-inside: avoid;
+}
+.training-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border-bottom: 1px solid #e6eee8;
+  padding-bottom: 0.4rem;
+}
+.training-card__num {
+  flex: 0 0 26px;
+  height: 26px;
+  background: #1f4d27;
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 10.5pt;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.training-card__title h3 {
+  margin: 0;
+  font-size: 11pt;
+  font-weight: 700;
+  color: #1f4d27;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+.training-card__title p {
+  margin: 0.1rem 0 0;
+  font-size: 9pt;
+  color: var(--muted);
+}
+.training-card__body {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 0.5rem;
+}
+.training-card__col h4 {
+  margin: 0 0 0.25rem;
+  font-size: 8.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2c7a3e;
+  font-weight: 700;
+}
+.training-points {
+  margin: 0;
+  padding-left: 0.95rem;
+  font-size: 9pt;
+  line-height: 1.45;
+  color: #2a3540;
+}
+.training-points li { margin-bottom: 0.12rem; }
+.training-card__col--volume { background: #f3f8f4; border-radius: 6px; padding: 0.35rem 0.5rem; }
+.training-volume { display: flex; flex-direction: column; gap: 0.1rem; }
+.training-volume__main { font-weight: 700; font-size: 11pt; color: #1f4d27; }
+.training-volume__sub  { font-size: 8.5pt; color: var(--muted); }
+.training-card--empty { grid-column: 1 / -1; padding: 1.2rem; text-align: center; color: var(--muted); }
+
+/* ===== Print rules ===== */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
 @media print {
   .no-print { display: none !important; }
-  body { background: white; }
-  .app-main { padding: 0; max-width: none; }
-  .upload-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .upload-card {
-    break-inside: avoid;
-    box-shadow: none;
-    border: 1px solid #ccc;
+  .upload-grid { display: none !important; }
+  body {
+    background: #fff;
+    margin: 0;
   }
-  .upload-card::before { display: none; }
-  .summary-section { box-shadow: none; border: none; padding: 0.5rem; }
-  .summary-output h3 { page-break-after: avoid; }
+  .app-main { padding: 0; max-width: none; margin: 0; }
+  .summary-section {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    background: transparent;
+  }
+  .summary-output { padding: 0; }
+  .report-page {
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm 12mm 10mm;
+  }
 }
