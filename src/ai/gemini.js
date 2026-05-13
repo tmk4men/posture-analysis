@@ -3,8 +3,13 @@
 //   - "direct" : call the AI provider's API directly from the browser using the operator's own key
 // Providers supported in both modes: gemini / openai / anthropic.
 
-import { MUSCLES, muscleIds } from "../data/muscles.js";
-import { MACHINES, machineIds } from "../data/machines.js";
+const V = new URL(import.meta.url).search;
+const [musclesMod, machinesMod] = await Promise.all([
+  import("../data/muscles.js" + V),
+  import("../data/machines.js" + V),
+]);
+const { MUSCLES, muscleIds } = musclesMod;
+const { MACHINES, machineIds } = machinesMod;
 
 const MUSCLE_TABLE = MUSCLES.map(
   (m) => `- id: "${m.id}"  label: "${m.label}"  side: ${m.side}`

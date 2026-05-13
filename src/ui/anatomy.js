@@ -3,7 +3,8 @@
 // id="m-<muscleId>"; colouring is applied via CSS classes on the
 // enclosing <svg> element by adding `data-weak` / `data-tight` lists.
 
-import { MUSCLES } from "../data/muscles.js";
+const V = new URL(import.meta.url).search;
+const { MUSCLES } = await import("../data/muscles.js" + V);
 
 // Colours
 const COLOR_WEAK = "#3b8a4f"; // green — 鍛えるべき筋肉

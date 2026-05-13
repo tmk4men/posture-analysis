@@ -1,9 +1,29 @@
-import { detectPose, warmup } from "./pose/detector.js";
-import { computeMetrics, summarizeAll } from "./pose/angles.js";
-import { setupUpload, resetUpload } from "./ui/upload.js";
-import { drawPoseOnCanvas, renderMetrics } from "./ui/overlay.js";
-import { renderReport, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js";
-import { generateFindings, getDefaultModel } from "./ai/gemini.js";
+// Cache-buster: propagate the ?v=... query string from this module's URL
+// to every dynamic import below. Bumped via scripts/bump-cache.sh on each
+// release so visitors always get fresh JS after a deploy.
+const V = new URL(import.meta.url).search;
+
+const [
+  detectorMod,
+  anglesMod,
+  uploadMod,
+  overlayMod,
+  reportMod,
+  geminiMod,
+] = await Promise.all([
+  import("./pose/detector.js" + V),
+  import("./pose/angles.js" + V),
+  import("./ui/upload.js" + V),
+  import("./ui/overlay.js" + V),
+  import("./ui/report.js" + V),
+  import("./ai/gemini.js" + V),
+]);
+const { detectPose, warmup } = detectorMod;
+const { computeMetrics, summarizeAll } = anglesMod;
+const { setupUpload, resetUpload } = uploadMod;
+const { drawPoseOnCanvas, renderMetrics } = overlayMod;
+const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
+const { generateFindings, getDefaultModel } = geminiMod;
 
 const VIEWS = ["front", "back", "left", "right"];
 const SETTINGS_KEY = "posture_app_settings_v2";

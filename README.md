@@ -107,6 +107,22 @@ katsu姿勢分析/
 - **印刷レイアウト調整**：`styles.css` の `@media print` セクション
 - **モデル変更**：`src/pose/detector.js` の `MODEL_URL`（lite / full / heavy の3種類）
 
+## デプロイ時のキャッシュバスター
+
+GitHub Pagesは静的アセットをブラウザに約10分キャッシュさせるため、コード更新後も既訪問ユーザーが古いJS/CSSを使い続けることがあります。これを防ぐため、リリース前に `?v=...` クエリ文字列を更新するスクリプトを用意しています。
+
+```bash
+./scripts/bump-cache.sh   # app.html / index.html の ?v= を現在のUTC時刻に更新
+git add -A
+git commit -m "release: bump assets"
+git push
+```
+
+仕組み：
+- `app.html` のエントリ `src/main.js?v=YYYYMMDD-HHMM` から、`main.js` が自分の `import.meta.url` を読み取り、すべての動的importに同じ `?v=...` を伝播
+- 結果、CSSとES Moduleツリー全体が一斉に新しいキャッシュキーになる
+- 触らずに `git push` した場合は `?v=` が据え置きなので、ブラウザの最大10分キャッシュに依存
+
 ## 免責
 
 本ツールは医療機器ではなく、提供する所見は医学的診断ではありません。施術判断は必ず有資格者が行ってください。

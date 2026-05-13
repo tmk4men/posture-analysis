@@ -7,9 +7,15 @@
 //   trainingPlan: [ { machineId, purpose, sets, reps, points[] } ]
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js";
-import { MACHINE_BY_ID } from "../data/machines.js";
-import { renderAnatomyPanel } from "./anatomy.js";
+const V = new URL(import.meta.url).search;
+const [musclesMod, machinesMod, anatomyMod] = await Promise.all([
+  import("../data/muscles.js" + V),
+  import("../data/machines.js" + V),
+  import("./anatomy.js" + V),
+]);
+const { MUSCLE_BY_ID } = musclesMod;
+const { MACHINE_BY_ID } = machinesMod;
+const { renderAnatomyPanel } = anatomyMod;
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
