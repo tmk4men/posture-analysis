@@ -1,7 +1,8 @@
-// Anatomy diagram: stylised front + back human body with muscle groups
-// rendered as individually-targetable paths. Each muscle path has
-// id="m-<muscleId>"; colouring is applied via CSS classes on the
-// enclosing <svg> element by adding `data-weak` / `data-tight` lists.
+// Anatomy diagram: uses a hand-painted base image of front + back human
+// figures, with invisible muscle-region <path> overlays. Each overlay has
+// id="m-<muscleId>"; the AI classifies muscles into weak/tight, and the
+// overlay is coloured (mix-blend-mode multiply) so the base illustration
+// shows through.
 
 const V = new URL(import.meta.url).search;
 const { MUSCLES } = await import("../data/muscles.js" + V);
@@ -9,190 +10,113 @@ const { MUSCLES } = await import("../data/muscles.js" + V);
 // Colours
 const COLOR_WEAK = "#3b8a4f"; // green — 鍛えるべき筋肉
 const COLOR_TIGHT = "#d97a26"; // orange — ほぐすべき筋肉
-const COLOR_NEUTRAL = "#cdb89a"; // neutral muscle tone
 
-// 8-head proportioned silhouette on a 240x600 viewBox.
-// Entire body (head→neck→shoulders→arms→torso→legs→feet) is a single closed path
-// so there are no internal seams between sub-shapes. Path traversed clockwise.
-// Landmarks (front, center x=120):
-//   head top:    y= 14
-//   chin:        y=104
-//   neck base:   y=112
-//   acromion:    y=140 (shoulder peak, x=58 / x=182)
-//   armpit:      y=170 (torso edge x=80 / x=160)
-//   waist:       y=270 (narrowest x=88 / x=152)
-//   hip widest:  y=380 (x=70 / x=170)
-//   knee:        y=470
-//   ankle:       y=586
-//   foot sole:   y=596
+// Base image paths (relative to the deployed site root).
+const FRONT_IMG = `assets/anatomy-front.webp${V}`;
+const BACK_IMG = `assets/anatomy-back.webp${V}`;
 
-const BODY = `
-  <path d="
-    M 120 14
-    C 96 14, 80 34, 80 62
-    C 80 84, 88 100, 100 104
-    L 104 112
-    C 92 120, 76 128, 58 140
-    C 48 158, 40 180, 36 202
-    C 30 240, 24 280, 24 320
-    C 24 360, 30 400, 38 420
-    C 40 428, 44 432, 50 432
-    L 60 432
-    L 60 420
-    C 58 400, 54 360, 56 320
-    C 56 280, 60 240, 66 200
-    C 70 184, 76 176, 80 170
-    C 84 200, 88 240, 88 270
-    C 86 292, 82 312, 78 332
-    C 72 352, 70 360, 70 380
-    C 74 412, 80 442, 86 470
-    C 84 490, 84 510, 88 540
-    C 88 560, 90 580, 92 590
-    L 92 596
-    L 110 596
-    C 113 590, 114 585, 114 580
-    C 115 560, 116 540, 117 510
-    C 117 490, 117 470, 117 440
-    C 118 410, 119 385, 119 365
-    L 121 365
-    C 122 385, 122 410, 123 440
-    C 123 470, 124 490, 124 510
-    C 125 540, 126 560, 127 580
-    C 127 585, 128 590, 130 596
-    L 148 596
-    L 148 590
-    C 150 580, 152 560, 152 540
-    C 156 510, 156 490, 154 470
-    C 160 442, 166 412, 170 380
-    C 170 360, 168 352, 162 332
-    C 158 312, 154 292, 152 270
-    C 152 240, 156 200, 160 170
-    C 164 176, 170 184, 174 200
-    C 180 240, 184 280, 184 320
-    C 184 360, 178 400, 174 420
-    L 174 432
-    L 184 432
-    C 190 432, 194 428, 196 420
-    C 204 400, 210 360, 210 320
-    C 216 280, 210 240, 204 202
-    C 200 180, 192 158, 182 140
-    C 164 128, 148 120, 136 112
-    L 140 104
-    C 152 100, 160 84, 160 62
-    C 160 34, 144 14, 120 14
-    Z"/>
-`;
+// SVG viewBox matches each image's pixel dimensions so muscle overlay paths
+// can be specified in raw image coordinates.
+const FRONT_W = 440;
+const FRONT_H = 1202;
+const BACK_W = 446;
+const BACK_H = 1192;
 
-const FRONT_SILHOUETTE = `
-<g class="silhouette" fill="#f6e5cf" stroke="#9b7a52" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
-  ${BODY}
-</g>
-`;
-
-const BACK_SILHOUETTE = FRONT_SILHOUETTE; // mirror-symmetric silhouette reused
-
-// Muscle region overlays — positioned over the silhouette.
-// Each is given id="m-<muscleId>" so it can be coloured via JS/CSS.
-
+// Muscle overlay paths — positioned over anatomical regions on each image.
 const FRONT_MUSCLES = `
-<g class="muscle-group" fill="${COLOR_NEUTRAL}" stroke="#7d5a30" stroke-width="0.8" opacity="0.92">
+<g class="muscle-overlay" fill="transparent" stroke="none">
   <path id="m-deep_neck_flexors"
-        d="M 110 100
-           Q 120 104 130 100
-           L 130 112
-           L 110 112 Z"/>
+        d="M 198 230
+           Q 220 224 242 230
+           L 242 280
+           L 198 280 Z"/>
   <path id="m-pectorals"
-        d="M 84 142
-           C 80 168, 100 184, 116 184
-           L 124 184
-           C 140 184, 160 168, 156 142
-           C 140 134, 122 134, 120 136
-           C 118 134, 100 134, 84 142 Z"/>
+        d="M 132 320
+           C 120 380, 148 432, 200 440
+           L 240 440
+           C 292 432, 320 380, 308 320
+           C 290 312, 258 314, 230 326
+           L 220 330
+           L 210 326
+           C 182 314, 150 312, 132 320 Z"/>
   <path id="m-abdominals"
-        d="M 98 196
-           C 96 230, 96 264, 100 294
-           C 104 312, 108 322, 116 326
-           L 124 326
-           C 132 322, 136 312, 140 294
-           C 144 264, 144 230, 142 196
-           C 134 200, 120 200, 120 200
-           C 120 200, 106 200, 98 196 Z"/>
+        d="M 188 455
+           C 184 520, 186 600, 198 680
+           C 202 700, 210 712, 218 714
+           L 222 714
+           C 230 712, 238 700, 242 680
+           C 254 600, 256 520, 252 455
+           C 240 462, 220 464, 220 464
+           C 220 464, 200 462, 188 455 Z"/>
 </g>
 `;
 
 const BACK_MUSCLES = `
-<g class="muscle-group" fill="${COLOR_NEUTRAL}" stroke="#7d5a30" stroke-width="0.8" opacity="0.92">
+<g class="muscle-overlay" fill="transparent" stroke="none">
   <path id="m-upper_traps"
-        d="M 86 118
-           C 96 138, 112 144, 118 144
-           L 122 144
-           C 128 144, 144 138, 154 118
-           C 142 128, 120 128, 120 128
-           C 120 128, 98 128, 86 118 Z"/>
+        d="M 222 230
+           C 278 246, 304 290, 308 338
+           L 138 338
+           C 142 290, 168 246, 222 230 Z"/>
   <path id="m-scapular_stabilizers"
-        d="M 78 148
-           C 72 178, 80 212, 92 224
-           L 116 224
-           L 116 162
-           C 104 158, 92 154, 86 150
-           C 82 148, 80 148, 78 148 Z
-           M 162 148
-           C 168 178, 160 212, 148 224
-           L 124 224
-           L 124 162
-           C 136 158, 148 154, 154 150
-           C 158 148, 160 148, 162 148 Z"/>
+        d="M 150 350
+           C 142 408, 162 466, 188 478
+           L 215 478
+           L 215 356
+           C 200 352, 180 350, 162 350
+           C 158 350, 154 350, 150 350 Z
+           M 294 350
+           C 302 408, 282 466, 256 478
+           L 229 478
+           L 229 356
+           C 244 352, 264 350, 282 350
+           C 286 350, 290 350, 294 350 Z"/>
   <path id="m-erector_spinae"
-        d="M 102 224
-           C 100 270, 102 320, 108 330
-           L 116 332
-           L 116 224 Z
-           M 138 224
-           C 140 270, 138 320, 132 330
-           L 124 332
-           L 124 224 Z"/>
+        d="M 196 488
+           C 192 550, 194 630, 200 690
+           L 218 690
+           L 218 488 Z
+           M 248 488
+           C 252 550, 250 630, 244 690
+           L 226 690
+           L 226 488 Z"/>
   <path id="m-glutes"
-        d="M 72 350
-           C 70 396, 90 416, 108 416
-           C 118 416, 119 402, 119 388
-           L 119 366
-           C 100 354, 80 350, 72 350 Z
-           M 168 350
-           C 170 396, 150 416, 132 416
-           C 122 416, 121 402, 121 388
-           L 121 366
-           C 140 354, 160 350, 168 350 Z"/>
+        d="M 130 706
+           C 122 800, 168 846, 206 846
+           C 218 846, 220 826, 220 802
+           L 220 740
+           C 192 706, 152 706, 130 706 Z
+           M 314 706
+           C 322 800, 276 846, 238 846
+           C 226 846, 224 826, 224 802
+           L 224 740
+           C 252 706, 292 706, 314 706 Z"/>
   <path id="m-hamstrings"
-        d="M 76 382
-           C 74 416, 76 450, 84 470
-           L 114 470
-           C 116 432, 117 402, 114 382
-           C 100 378, 84 378, 76 382 Z
-           M 164 382
-           C 166 416, 164 450, 156 470
-           L 126 470
-           C 124 432, 123 402, 126 382
-           C 140 378, 156 378, 164 382 Z"/>
+        d="M 142 858
+           C 132 940, 146 1020, 168 1028
+           L 218 1028
+           C 222 940, 222 860, 218 858
+           C 196 854, 162 854, 142 858 Z
+           M 302 858
+           C 312 940, 298 1020, 276 1028
+           L 226 1028
+           C 222 940, 222 860, 226 858
+           C 248 854, 282 854, 302 858 Z"/>
 </g>
 `;
 
-const FRONT_LABEL = `<text x="120" y="20" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic UI',sans-serif" font-size="14" font-weight="700" fill="#3a2a18" letter-spacing="0.08em">前面</text>`;
-const BACK_LABEL = `<text x="120" y="20" text-anchor="middle" font-family="'Hiragino Sans','Yu Gothic UI',sans-serif" font-size="14" font-weight="700" fill="#3a2a18" letter-spacing="0.08em">背面</text>`;
-
 function frontSvg() {
   return `
-<svg class="anatomy-svg" viewBox="0 0 240 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-  ${FRONT_LABEL}
-  ${FRONT_SILHOUETTE}
+<svg class="anatomy-svg" viewBox="0 0 ${FRONT_W} ${FRONT_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+  <image href="${FRONT_IMG}" x="0" y="0" width="${FRONT_W}" height="${FRONT_H}" preserveAspectRatio="xMidYMid meet"/>
   ${FRONT_MUSCLES}
 </svg>`;
 }
 
 function backSvg() {
   return `
-<svg class="anatomy-svg" viewBox="0 0 240 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-  ${BACK_LABEL}
-  ${BACK_SILHOUETTE}
+<svg class="anatomy-svg" viewBox="0 0 ${BACK_W} ${BACK_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+  <image href="${BACK_IMG}" x="0" y="0" width="${BACK_W}" height="${BACK_H}" preserveAspectRatio="xMidYMid meet"/>
   ${BACK_MUSCLES}
 </svg>`;
 }
@@ -203,15 +127,16 @@ export function renderAnatomyPanel(weakIds = [], tightIds = []) {
   const weakSet = new Set(weakIds);
   const tightSet = new Set(tightIds);
 
-  // Inline <style> scoped via a wrapper class — colours apply to <path id="m-..">.
+  // Highlighted overlays use mix-blend-mode: multiply so the underlying
+  // illustration's shading still shows through the colour wash.
   const styleRules = MUSCLES.map((m) => {
     if (weakSet.has(m.id)) {
-      return `.anatomy-panel #m-${m.id} { fill: ${COLOR_WEAK}; stroke: #225a2e; }`;
+      return `.anatomy-panel #m-${m.id} { fill: ${COLOR_WEAK}; opacity: 0.55; mix-blend-mode: multiply; }`;
     }
     if (tightSet.has(m.id)) {
-      return `.anatomy-panel #m-${m.id} { fill: ${COLOR_TIGHT}; stroke: #8a4912; }`;
+      return `.anatomy-panel #m-${m.id} { fill: ${COLOR_TIGHT}; opacity: 0.55; mix-blend-mode: multiply; }`;
     }
-    return ""; // leave neutral
+    return "";
   })
     .filter(Boolean)
     .join("\n");
@@ -220,8 +145,8 @@ export function renderAnatomyPanel(weakIds = [], tightIds = []) {
 <div class="anatomy-panel">
   <style>${styleRules}</style>
   <div class="anatomy-views">
-    <div class="anatomy-view">${frontSvg()}</div>
-    <div class="anatomy-view">${backSvg()}</div>
+    <div class="anatomy-view">${frontSvg()}<div class="anatomy-view__caption">前面</div></div>
+    <div class="anatomy-view">${backSvg()}<div class="anatomy-view__caption">背面</div></div>
   </div>
   <div class="anatomy-legend">
     <span class="legend-item"><span class="legend-swatch swatch-weak"></span>鍛えるべき筋肉</span>
@@ -231,4 +156,4 @@ export function renderAnatomyPanel(weakIds = [], tightIds = []) {
 `;
 }
 
-export const ANATOMY_COLORS = { weak: COLOR_WEAK, tight: COLOR_TIGHT, neutral: COLOR_NEUTRAL };
+export const ANATOMY_COLORS = { weak: COLOR_WEAK, tight: COLOR_TIGHT, neutral: "#cdb89a" };
