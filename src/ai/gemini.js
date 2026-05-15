@@ -4,20 +4,26 @@
 // Providers supported in both modes: gemini / openai / anthropic.
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, machinesMod] = await Promise.all([
+const [musclesMod, assetsMod] = await Promise.all([
   import("../data/muscles.js" + V),
-  import("../data/machines.js" + V),
+  import("../data/exerciseAssets.js" + V),
 ]);
 const { MUSCLES, muscleIds } = musclesMod;
-const { MACHINES, machineIds } = machinesMod;
+const { EXERCISE_ASSETS, assetIds } = assetsMod;
 
 const MUSCLE_TABLE = MUSCLES.map(
   (m) => `- id: "${m.id}"  label: "${m.label}"  side: ${m.side}`
 ).join("\n");
 
-const MACHINE_TABLE = MACHINES.map(
-  (m) => `- id: "${m.id}"  label: "${m.label}"  対象: ${m.targets.join("/")}`
-).join("\n");
+// Show AI only what it needs to pick well: id, label, category, and which
+// muscles each asset targets (so it can match against weak/tight muscles).
+const ASSET_TABLE = EXERCISE_ASSETS.map((a) => {
+  const targets = [];
+  if (a.strengthens.length) targets.push(`鍛=${a.strengthens.join(",")}`);
+  if (a.stretches.length) targets.push(`ほぐす=${a.stretches.join(",")}`);
+  if (!targets.length) targets.push("（有酸素）");
+  return `- id: "${a.id}"  label: "${a.label}"  種別: ${a.category}  ${targets.join(" ")}`;
+}).join("\n");
 
 const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートを作成するアシスタントです。
 
@@ -30,30 +36,27 @@ const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢
   "diagnosis": "...",
   "weakMuscles": [ { "id": "...", "note": "..." } ],
   "tightMuscles": [ { "id": "...", "note": "..." } ],
-  "trainingPlan": [
-    { "machineId": "...", "purpose": "...", "sets": "...", "reps": "...", "points": ["..."] }
-  ]
+  "trainingPlan": [ { "assetId": "..." }, { "assetId": "..." }, { "assetId": "..." }, { "assetId": "..." } ]
 }
 
 各フィールド要件：
 - diagnosis: 計測値から読み取れる姿勢の特徴と影響を、患者向けに平易な日本語で 3〜4文。参考例「この方は、頭がやや前に出やすく、首の前傾や肩の巻き込み、背中の丸まり傾向が見られます。…」
 - weakMuscles: 鍛えるべき筋肉。下記筋肉カタログの id から 2〜5個 選択。note には「なぜ弱化しているか／鍛える狙い」を15文字程度。
 - tightMuscles: ほぐすべき筋肉。同じく id から 2〜5個 選択。note には「なぜ硬くなっているか／ほぐす狙い」を15文字程度。
-- trainingPlan: 必ず ちょうど4種目。下記マシンカタログの id から選択。週2回固定で実施する前提。
-  - purpose: そのマシンを採用する狙い（例「肩甲骨を寄せる」「体幹安定」）
-  - sets: 例「10回 × 2セット」
-  - reps: 例「軽い重さでOK」など補足。空文字でも可。
-  - points: 運動のポイントを2〜3個、簡潔に。
+- trainingPlan: 必ず ちょうど4要素。下記エクササイズカタログの id を選ぶだけでよい（運動内容・回数の生成は不要、画像に焼き込み済み）。
+  - 推奨配分: 弱化筋を鍛える strength 2〜3種 + 硬い筋をほぐす stretch 1〜2種
+  - 弱化筋に対応する strengthens を含むアセットを優先
+  - 硬い筋に対応する stretches を含むアセットを優先
+  - 同じ id を重複させない
 
-【利用可能な筋肉カタログ（idと部位）】
+【利用可能な筋肉カタログ】
 ${MUSCLE_TABLE}
 
-【利用可能なマシンカタログ（id・名称・対象部位）】
-${MACHINE_TABLE}
+【利用可能なエクササイズ・アセットカタログ（必ずこの id から選択）】
+${ASSET_TABLE}
 
 注意：
 - 筋肉idは weakMuscles と tightMuscles で重複させない。
-- マシンidは trainingPlan 内で重複させない。
 - 計測値が乏しい場合でも、典型的な姿勢パターンから一般的な推奨を返してください。`;
 
 const DEFAULT_MODELS = {
@@ -103,7 +106,7 @@ function tryParseJson(text) {
 function sanitizeFindings(parsed) {
   if (!parsed || typeof parsed !== "object") return null;
   const validMuscleIds = new Set(muscleIds());
-  const validMachineIds = new Set(machineIds());
+  const validAssetIds = new Set(assetIds());
 
   const filterMuscles = (arr) =>
     Array.isArray(arr)
@@ -112,16 +115,21 @@ function sanitizeFindings(parsed) {
           .map((x) => ({ id: x.id, note: String(x.note ?? "") }))
       : [];
 
+  // Accept either { assetId } (new schema) or { machineId } (legacy/typo fallback).
   const trainingPlan = Array.isArray(parsed.trainingPlan)
     ? parsed.trainingPlan
-        .filter((x) => x && typeof x.machineId === "string" && validMachineIds.has(x.machineId))
-        .map((x) => ({
-          machineId: x.machineId,
-          purpose: String(x.purpose ?? ""),
-          sets: String(x.sets ?? ""),
-          reps: String(x.reps ?? ""),
-          points: Array.isArray(x.points) ? x.points.map(String).slice(0, 4) : [],
-        }))
+        .map((x) => {
+          if (!x) return null;
+          const id = typeof x.assetId === "string" ? x.assetId
+                   : typeof x.machineId === "string" ? x.machineId
+                   : typeof x.id === "string" ? x.id
+                   : null;
+          return id && validAssetIds.has(id) ? { assetId: id } : null;
+        })
+        .filter(Boolean)
+        // de-dup
+        .filter((x, i, a) => a.findIndex((y) => y.assetId === x.assetId) === i)
+        .slice(0, 4)
     : [];
 
   return {

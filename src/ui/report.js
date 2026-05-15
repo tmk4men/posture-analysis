@@ -4,17 +4,17 @@
 //   diagnosis: string,
 //   weakMuscles:  [ { id, note } ],
 //   tightMuscles: [ { id, note } ],
-//   trainingPlan: [ { machineId, purpose, sets, reps, points[] } ]
+//   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, machinesMod, anatomyMod] = await Promise.all([
+const [musclesMod, assetsMod, anatomyMod] = await Promise.all([
   import("../data/muscles.js" + V),
-  import("../data/machines.js" + V),
+  import("../data/exerciseAssets.js" + V),
   import("./anatomy.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
-const { MACHINE_BY_ID } = machinesMod;
+const { ASSET_BY_ID } = assetsMod;
 const { renderAnatomyPanel } = anatomyMod;
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
@@ -55,34 +55,12 @@ function muscleCardHtml(item, role) {
 }
 
 function trainingCardHtml(plan, index) {
-  const def = MACHINE_BY_ID[plan.machineId];
-  if (!def) return "";
-  const points = (plan.points || [])
-    .filter(Boolean)
-    .map((p) => `<li>${escapeHtml(p)}</li>`)
-    .join("");
+  const asset = ASSET_BY_ID[plan.assetId];
+  if (!asset) return "";
   return `
     <li class="training-card">
-      <div class="training-card__head">
-        <span class="training-card__num">${index + 1}</span>
-        <div class="training-card__title">
-          <h3>${escapeHtml(def.label)}</h3>
-          <p>${escapeHtml(plan.purpose || def.targets.join("・"))}</p>
-        </div>
-      </div>
-      <div class="training-card__body">
-        <div class="training-card__col">
-          <h4>運動のポイント</h4>
-          <ul class="training-points">${points || "<li>—</li>"}</ul>
-        </div>
-        <div class="training-card__col training-card__col--volume">
-          <h4>目安（週2回実施）</h4>
-          <div class="training-volume">
-            <span class="training-volume__main">${escapeHtml(plan.sets || "—")}</span>
-            ${plan.reps ? `<span class="training-volume__sub">${escapeHtml(plan.reps)}</span>` : ""}
-          </div>
-        </div>
-      </div>
+      <span class="training-card__num">${index + 1}</span>
+      <img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">
     </li>
   `;
 }
