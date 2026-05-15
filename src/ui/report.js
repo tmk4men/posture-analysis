@@ -32,11 +32,11 @@ function formatPatientDate(date) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-// Pick the best photo to include in the report. Prefer side views since
-// posture diagnostics (FHP, shoulder-forward) come from them.
+// Pick the best photo to include in the report. Prefer the side view since
+// posture diagnostics (FHP, shoulder-forward) come from it.
 function pickPhotoDataUrl(canvasDataUrls) {
   if (!canvasDataUrls) return { url: null, view: null };
-  for (const view of ["left", "right", "front", "back"]) {
+  for (const view of ["right", "front"]) {
     if (canvasDataUrls[view]) return { url: canvasDataUrls[view], view };
   }
   return { url: null, view: null };

@@ -25,7 +25,7 @@ const { drawPoseOnCanvas, renderMetrics } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
 const { generateFindings, getDefaultModel } = geminiMod;
 
-const VIEWS = ["front", "back", "left", "right"];
+const VIEWS = ["front", "right"];
 const SETTINGS_KEY = "posture_app_settings_v2";
 
 // Hard-coded default proxy URL (Cloudflare Worker that holds the AI API key server-side).
@@ -33,7 +33,7 @@ const SETTINGS_KEY = "posture_app_settings_v2";
 const DEFAULT_PROXY_URL = "https://posture-analysis-proxy.tmk4men.workers.dev";
 
 const state = {
-  metricsByView: { front: null, back: null, left: null, right: null },
+  metricsByView: { front: null, right: null },
 };
 
 function defaultSettings() {

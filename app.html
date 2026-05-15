@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260515-0418" />
+  <link rel="stylesheet" href="app.css?v=20260515-0432" />
 </head>
 <body>
   <header class="app-header no-print">
@@ -64,8 +64,6 @@
 
     <div class="carousel-dots no-print" id="carousel-dots" aria-hidden="true">
       <span class="dot" data-view="front"></span>
-      <span class="dot" data-view="back"></span>
-      <span class="dot" data-view="left"></span>
       <span class="dot" data-view="right"></span>
     </div>
 
@@ -78,24 +76,6 @@
         </label>
         <div class="canvas-wrap"><canvas data-view="front"></canvas></div>
         <ul class="metric-list" data-view="front"></ul>
-      </article>
-      <article class="upload-card" data-view="back">
-        <h2>背面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="back" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="back"></canvas></div>
-        <ul class="metric-list" data-view="back"></ul>
-      </article>
-      <article class="upload-card" data-view="left">
-        <h2>左側面</h2>
-        <label class="dropzone">
-          <input type="file" accept="image/*" data-view="left" />
-          <span class="dropzone-hint">タップして写真を選択</span>
-        </label>
-        <div class="canvas-wrap"><canvas data-view="left"></canvas></div>
-        <ul class="metric-list" data-view="left"></ul>
       </article>
       <article class="upload-card" data-view="right">
         <h2>右側面</h2>
@@ -165,6 +145,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="src/main.js?v=20260515-0418"></script>
+  <script type="module" src="src/main.js?v=20260515-0432"></script>
 </body>
 </html>
