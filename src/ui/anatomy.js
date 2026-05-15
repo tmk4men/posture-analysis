@@ -11,156 +11,168 @@ const COLOR_WEAK = "#3b8a4f"; // green — 鍛えるべき筋肉
 const COLOR_TIGHT = "#d97a26"; // orange — ほぐすべき筋肉
 const COLOR_NEUTRAL = "#cdb89a"; // neutral muscle tone
 
-// SVG silhouette (front view).  240 wide × 600 tall viewBox.
+// 8-head proportioned silhouette on a 240x600 viewBox.
+// Entire body (head→neck→shoulders→arms→torso→legs→feet) is a single closed path
+// so there are no internal seams between sub-shapes. Path traversed clockwise.
+// Landmarks (front, center x=120):
+//   head top:    y= 14
+//   chin:        y=104
+//   neck base:   y=112
+//   acromion:    y=140 (shoulder peak, x=58 / x=182)
+//   armpit:      y=170 (torso edge x=80 / x=160)
+//   waist:       y=270 (narrowest x=88 / x=152)
+//   hip widest:  y=380 (x=70 / x=170)
+//   knee:        y=470
+//   ankle:       y=586
+//   foot sole:   y=596
+
+const BODY = `
+  <path d="
+    M 120 14
+    C 96 14, 80 34, 80 62
+    C 80 84, 88 100, 100 104
+    L 104 112
+    C 92 120, 76 128, 58 140
+    C 48 158, 40 180, 36 202
+    C 30 240, 24 280, 24 320
+    C 24 360, 30 400, 38 420
+    C 40 428, 44 432, 50 432
+    L 60 432
+    L 60 420
+    C 58 400, 54 360, 56 320
+    C 56 280, 60 240, 66 200
+    C 70 184, 76 176, 80 170
+    C 84 200, 88 240, 88 270
+    C 86 292, 82 312, 78 332
+    C 72 352, 70 360, 70 380
+    C 74 412, 80 442, 86 470
+    C 84 490, 84 510, 88 540
+    C 88 560, 90 580, 92 590
+    L 92 596
+    L 110 596
+    C 113 590, 114 585, 114 580
+    C 115 560, 116 540, 117 510
+    C 117 490, 117 470, 117 440
+    C 118 410, 119 385, 119 365
+    L 121 365
+    C 122 385, 122 410, 123 440
+    C 123 470, 124 490, 124 510
+    C 125 540, 126 560, 127 580
+    C 127 585, 128 590, 130 596
+    L 148 596
+    L 148 590
+    C 150 580, 152 560, 152 540
+    C 156 510, 156 490, 154 470
+    C 160 442, 166 412, 170 380
+    C 170 360, 168 352, 162 332
+    C 158 312, 154 292, 152 270
+    C 152 240, 156 200, 160 170
+    C 164 176, 170 184, 174 200
+    C 180 240, 184 280, 184 320
+    C 184 360, 178 400, 174 420
+    L 174 432
+    L 184 432
+    C 190 432, 194 428, 196 420
+    C 204 400, 210 360, 210 320
+    C 216 280, 210 240, 204 202
+    C 200 180, 192 158, 182 140
+    C 164 128, 148 120, 136 112
+    L 140 104
+    C 152 100, 160 84, 160 62
+    C 160 34, 144 14, 120 14
+    Z"/>
+`;
+
 const FRONT_SILHOUETTE = `
-<g class="silhouette" fill="#f6e5cf" stroke="#9b7a52" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-  <!-- head -->
-  <ellipse cx="120" cy="56" rx="28" ry="36"/>
-  <!-- neck -->
-  <path d="M108 86 Q108 100 105 112 L135 112 Q132 100 132 86 Q126 92 120 92 Q114 92 108 86 Z"/>
-  <!-- torso + hips + legs as a single silhouette -->
-  <path d="
-    M105 112
-    Q88 116 78 126
-    Q62 142 58 170
-    Q52 210 56 252
-    Q60 290 70 320
-    Q72 350 76 372
-    Q70 400 72 440
-    Q74 490 80 540
-    Q84 580 88 595
-    L114 595
-    Q116 580 117 540
-    Q118 490 119 440
-    L120 405
-    L121 440
-    Q122 490 123 540
-    Q124 580 126 595
-    L152 595
-    Q156 580 160 540
-    Q166 490 168 440
-    Q170 400 164 372
-    Q168 350 170 320
-    Q180 290 184 252
-    Q188 210 182 170
-    Q178 142 162 126
-    Q152 116 135 112
-    Z
-  "/>
-  <!-- arms (drawn behind silhouette via order — these come later visually) -->
-  <path d="
-    M78 126
-    Q56 162 46 222
-    Q42 300 46 360
-    L62 360
-    Q58 300 64 224
-    Q70 174 84 138
-    Z
-  "/>
-  <path d="
-    M162 126
-    Q184 162 194 222
-    Q198 300 194 360
-    L178 360
-    Q182 300 176 224
-    Q170 174 156 138
-    Z
-  "/>
+<g class="silhouette" fill="#f6e5cf" stroke="#9b7a52" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
+  ${BODY}
 </g>
 `;
 
-const BACK_SILHOUETTE = FRONT_SILHOUETTE; // mirror-symmetric silhouette, OK to reuse
+const BACK_SILHOUETTE = FRONT_SILHOUETTE; // mirror-symmetric silhouette reused
 
-// Muscle region overlays.  Each path is given id="m-<muscleId>" so it
-// can be coloured by JS based on the AI's weak/tight classification.
-// Numbers chosen to sit roughly on the right anatomical area.
+// Muscle region overlays — positioned over the silhouette.
+// Each is given id="m-<muscleId>" so it can be coloured via JS/CSS.
 
 const FRONT_MUSCLES = `
 <g class="muscle-group" fill="${COLOR_NEUTRAL}" stroke="#7d5a30" stroke-width="0.8" opacity="0.92">
-  <!-- 深層頸部屈筋群 (deep neck flexors) — small band on the throat -->
   <path id="m-deep_neck_flexors"
-        d="M112 96 Q120 100 128 96 L128 110 L112 110 Z"/>
-  <!-- 胸筋群 (pectorals) — two ovals on upper chest -->
+        d="M 110 100
+           Q 120 104 130 100
+           L 130 112
+           L 110 112 Z"/>
   <path id="m-pectorals"
-        d="M84 130
-           Q82 158 110 170
-           Q120 174 120 170
-           Q120 174 130 170
-           Q158 158 156 130
-           Q140 120 120 122
-           Q100 120 84 130 Z"/>
-  <!-- 腹筋群 (abdominals) — vertical block on belly with 6-pack ridges -->
+        d="M 84 142
+           C 80 168, 100 184, 116 184
+           L 124 184
+           C 140 184, 160 168, 156 142
+           C 140 134, 122 134, 120 136
+           C 118 134, 100 134, 84 142 Z"/>
   <path id="m-abdominals"
-        d="M96 178
-           Q94 220 96 260
-           Q98 290 104 308
-           L120 314
-           L136 308
-           Q142 290 144 260
-           Q146 220 144 178
-           Q120 184 96 178 Z"/>
+        d="M 98 196
+           C 96 230, 96 264, 100 294
+           C 104 312, 108 322, 116 326
+           L 124 326
+           C 132 322, 136 312, 140 294
+           C 144 264, 144 230, 142 196
+           C 134 200, 120 200, 120 200
+           C 120 200, 106 200, 98 196 Z"/>
 </g>
 `;
 
 const BACK_MUSCLES = `
 <g class="muscle-group" fill="${COLOR_NEUTRAL}" stroke="#7d5a30" stroke-width="0.8" opacity="0.92">
-  <!-- 肩甲挙筋・僧帽筋上部 (upper traps / levator scapulae) -->
   <path id="m-upper_traps"
-        d="M92 116
-           Q98 134 116 142
-           L120 144
-           L124 142
-           Q142 134 148 116
-           Q138 124 120 124
-           Q102 124 92 116 Z"/>
-  <!-- 肩甲骨周囲筋 (scapular stabilisers) — two trapezoid shapes -->
+        d="M 86 118
+           C 96 138, 112 144, 118 144
+           L 122 144
+           C 128 144, 144 138, 154 118
+           C 142 128, 120 128, 120 128
+           C 120 128, 98 128, 86 118 Z"/>
   <path id="m-scapular_stabilizers"
-        d="M82 138
-           Q78 174 92 210
-           L116 210
-           L116 152
-           Q104 148 96 144
-           Q90 142 82 138 Z
-           M158 138
-           Q162 174 148 210
-           L124 210
-           L124 152
-           Q136 148 144 144
-           Q150 142 158 138 Z"/>
-  <!-- 腰背部筋群（脊柱起立筋） -->
+        d="M 78 148
+           C 72 178, 80 212, 92 224
+           L 116 224
+           L 116 162
+           C 104 158, 92 154, 86 150
+           C 82 148, 80 148, 78 148 Z
+           M 162 148
+           C 168 178, 160 212, 148 224
+           L 124 224
+           L 124 162
+           C 136 158, 148 154, 154 150
+           C 158 148, 160 148, 162 148 Z"/>
   <path id="m-erector_spinae"
-        d="M104 214
-           Q102 260 104 310
-           L116 320
-           L116 214 Z
-           M136 214
-           Q138 260 136 310
-           L124 320
-           L124 214 Z"/>
-  <!-- 臀筋群 (glutes) — two rounded shapes on the buttocks -->
+        d="M 102 224
+           C 100 270, 102 320, 108 330
+           L 116 332
+           L 116 224 Z
+           M 138 224
+           C 140 270, 138 320, 132 330
+           L 124 332
+           L 124 224 Z"/>
   <path id="m-glutes"
-        d="M76 360
-           Q74 405 96 420
-           Q118 422 118 400
-           L118 370
-           Q100 360 76 360 Z
-           M164 360
-           Q166 405 144 420
-           Q122 422 122 400
-           L122 370
-           Q140 360 164 360 Z"/>
-  <!-- ハムストリングス (hamstrings) — two long shapes on back of thighs -->
+        d="M 72 350
+           C 70 396, 90 416, 108 416
+           C 118 416, 119 402, 119 388
+           L 119 366
+           C 100 354, 80 350, 72 350 Z
+           M 168 350
+           C 170 396, 150 416, 132 416
+           C 122 416, 121 402, 121 388
+           L 121 366
+           C 140 354, 160 350, 168 350 Z"/>
   <path id="m-hamstrings"
-        d="M84 430
-           Q80 490 86 540
-           L112 540
-           Q114 490 112 430
-           Q98 426 84 430 Z
-           M156 430
-           Q160 490 154 540
-           L128 540
-           Q126 490 128 430
-           Q142 426 156 430 Z"/>
+        d="M 76 382
+           C 74 416, 76 450, 84 470
+           L 114 470
+           C 116 432, 117 402, 114 382
+           C 100 378, 84 378, 76 382 Z
+           M 164 382
+           C 166 416, 164 450, 156 470
+           L 126 470
+           C 124 432, 123 402, 126 382
+           C 140 378, 156 378, 164 382 Z"/>
 </g>
 `;
 
