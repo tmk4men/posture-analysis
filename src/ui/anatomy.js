@@ -22,6 +22,24 @@ const FRONT_H = 1202;
 const BACK_W = 446;
 const BACK_H = 1192;
 
+// Anchor points for muscle-name callout labels — placed near each region,
+// with a leader line back to the highlighted overlay so the label can sit
+// outside the body silhouette and stay legible. anchorX/anchorY = the point
+// the leader line ends at on the muscle; labelX/labelY = where the text sits.
+const FRONT_LABEL_ANCHORS = {
+  deep_neck_flexors:    { anchorX: 220, anchorY: 255, labelX: 372, labelY: 255, align: "start" },
+  pectorals:            { anchorX: 220, anchorY: 380, labelX: 372, labelY: 360, align: "start" },
+  abdominals:           { anchorX: 220, anchorY: 580, labelX: 372, labelY: 580, align: "start" },
+};
+
+const BACK_LABEL_ANCHORS = {
+  upper_traps:           { anchorX: 222, anchorY: 290, labelX: 374, labelY: 270, align: "start" },
+  scapular_stabilizers:  { anchorX: 295, anchorY: 410, labelX: 374, labelY: 420, align: "start" },
+  erector_spinae:        { anchorX: 222, anchorY: 570, labelX: 70,  labelY: 560, align: "end"   },
+  glutes:                { anchorX: 222, anchorY: 760, labelX: 374, labelY: 760, align: "start" },
+  hamstrings:            { anchorX: 222, anchorY: 920, labelX: 70,  labelY: 920, align: "end"   },
+};
+
 // Muscle overlay paths — positioned over anatomical regions on each image.
 const FRONT_MUSCLES = `
 <g class="muscle-overlay" fill="transparent" stroke="none">
@@ -105,19 +123,59 @@ const BACK_MUSCLES = `
 </g>
 `;
 
-function frontSvg() {
+// Build callout-label SVG markup for the highlighted muscles only.  Labels
+// sit beside the figure with a thin leader line pointing back to the muscle,
+// so the patient can read both the colour and the name at a glance.
+function buildLabels(anchors, weakSet, tightSet) {
+  const lines = [];
+  for (const [muscleId, pos] of Object.entries(anchors)) {
+    let role = null;
+    if (weakSet.has(muscleId)) role = "weak";
+    else if (tightSet.has(muscleId)) role = "tight";
+    if (!role) continue;
+
+    const def = MUSCLES.find((m) => m.id === muscleId);
+    if (!def) continue;
+    const text = def.label;
+
+    lines.push(`
+      <g class="muscle-label muscle-label--${role}">
+        <line class="muscle-label__leader"
+              x1="${pos.anchorX}" y1="${pos.anchorY}"
+              x2="${pos.labelX}"  y2="${pos.labelY}"/>
+        <rect class="muscle-label__bg"
+              x="${pos.align === "end" ? pos.labelX - 150 : pos.labelX - 4}"
+              y="${pos.labelY - 16}"
+              width="154" height="26" rx="6" ry="6"/>
+        <text class="muscle-label__text"
+              x="${pos.labelX}" y="${pos.labelY}"
+              text-anchor="${pos.align}">${escapeXml(text)}</text>
+      </g>`);
+  }
+  return lines.join("\n");
+}
+
+function escapeXml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function frontSvg(weakSet, tightSet) {
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${FRONT_W} ${FRONT_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
   <image href="${FRONT_IMG}" x="0" y="0" width="${FRONT_W}" height="${FRONT_H}" preserveAspectRatio="xMidYMid meet"/>
   ${FRONT_MUSCLES}
+  ${buildLabels(FRONT_LABEL_ANCHORS, weakSet, tightSet)}
 </svg>`;
 }
 
-function backSvg() {
+function backSvg(weakSet, tightSet) {
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${BACK_W} ${BACK_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
   <image href="${BACK_IMG}" x="0" y="0" width="${BACK_W}" height="${BACK_H}" preserveAspectRatio="xMidYMid meet"/>
   ${BACK_MUSCLES}
+  ${buildLabels(BACK_LABEL_ANCHORS, weakSet, tightSet)}
 </svg>`;
 }
 
@@ -145,8 +203,8 @@ export function renderAnatomyPanel(weakIds = [], tightIds = []) {
 <div class="anatomy-panel">
   <style>${styleRules}</style>
   <div class="anatomy-views">
-    <div class="anatomy-view">${frontSvg()}<div class="anatomy-view__caption">前面</div></div>
-    <div class="anatomy-view">${backSvg()}<div class="anatomy-view__caption">背面</div></div>
+    <div class="anatomy-view">${frontSvg(weakSet, tightSet)}<div class="anatomy-view__caption">前面</div></div>
+    <div class="anatomy-view">${backSvg(weakSet, tightSet)}<div class="anatomy-view__caption">背面</div></div>
   </div>
   <div class="anatomy-legend">
     <span class="legend-item"><span class="legend-swatch swatch-weak"></span>鍛えるべき筋肉</span>

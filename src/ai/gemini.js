@@ -9,13 +9,15 @@
 
 const V = new URL(import.meta.url).search;
 const recommendMod = await import("../pose/recommend.js" + V);
-const { deriveRecommendations, summarizeIssues } = recommendMod;
+const { deriveRecommendations, summarizeIssues, classifyPostureType } = recommendMod;
 
 const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートの「診断文」を作成するアシスタントです。
 
 【入力】
 - 渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
-- "detectedIssues" は、計測値から自動検出された姿勢上の所見の要約です。診断文はこの所見と矛盾しないように書いてください。
+- "detectedIssues" は、計測値から自動検出された姿勢上の所見の要約です。
+- "postureType" は整骨院でよく見られる姿勢7分類（理想姿勢／猫背・円背／反り腰／スウェイバック／フラットバック／左右アンバランス／複合）のうち、計測値から自動判定された分類です。
+- 診断文は postureType と detectedIssues の両方と矛盾しないように書いてください。
 
 【出力ルール】
 必ず以下の JSON フォーマットのみを返してください（説明文・コードフェンス禁止）。
@@ -25,17 +27,18 @@ const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢
 
 diagnosis の要件：
 - 患者に向けた平易な日本語で 3〜4文（合計 120〜180 文字程度）。
+- 文頭または1文目で postureType（例：「猫背・円背タイプ」）に触れる。
 - detectedIssues に挙がっている所見を必ず1つ以上具体的に言及する（例：「頭がやや前に出ています」「肩が前方に巻き込まれています」など）。
 - 検出された数値そのもの（"+12.3%" など）はレポート本文に出さず、患者向けの自然な表現に置き換える。
 - 影響の説明と、改善できる前向きな見通しを1文添える。
-- 参考例「この方は、頭がやや前に出やすく、首の前傾や肩の巻き込み、背中の丸まり傾向が見られます。これらは長時間のデスクワークや姿勢のクセが原因と考えられます。週2回程度のトレーニングと、緊張した筋肉のストレッチを継続することで、徐々に改善が期待できます。」
+- 参考例「この方は猫背・円背タイプの傾向があり、頭がやや前に出やすく、肩の巻き込みや背中の丸まりが見られます。長時間のデスクワークなどが原因と考えられます。週2回程度のトレーニングと、緊張した筋肉のストレッチを継続することで、徐々に改善が期待できます。」
 
 注意：
 - 筋肉名やエクササイズ名は出力に含めないでください（別パイプラインで自動付与されます）。
-- detectedIssues に何も挙がっていない場合は、典型的な現代姿勢（軽度の頭部前方位・巻き肩など）への一般的な助言を返してください。`;
+- detectedIssues に何も挙がっていない場合は、理想姿勢に近い旨を伝えつつ、典型的な現代姿勢（軽度の頭部前方位・巻き肩など）の予防的助言を返してください。`;
 
 const DEFAULT_MODELS = {
-  gemini: "gemini-2.5-flash",
+  gemini: "gemini-3-flash-preview",
   openai: "gpt-4o-mini",
   anthropic: "claude-haiku-4-5-20251001",
 };
@@ -45,6 +48,7 @@ export function getDefaultModel(provider) {
 }
 
 function buildUserPayload(patient, metricsByView) {
+  const type = classifyPostureType(metricsByView);
   return {
     patient: {
       name: patient.name || null,
@@ -52,6 +56,10 @@ function buildUserPayload(patient, metricsByView) {
     },
     metrics: metricsByView,
     detectedIssues: summarizeIssues(metricsByView),
+    postureType: {
+      id: type.id,
+      reasons: type.reasons,
+    },
     閾値の目安: {
       肩の傾き: "±2° 以上で左右差あり",
       骨盤の傾き: "±2° 以上で左右差あり",

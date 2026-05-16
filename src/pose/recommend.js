@@ -4,12 +4,14 @@
 // noticeably different reports.
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod] = await Promise.all([
+const [musclesMod, assetsMod, postureTypesMod] = await Promise.all([
   import("../data/muscles.js" + V),
   import("../data/exerciseAssets.js" + V),
+  import("../data/postureTypes.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
 const { EXERCISE_ASSETS } = assetsMod;
+const { POSTURE_TYPE_BY_ID } = postureTypesMod;
 
 function getMetric(byView, view, key) {
   const arr = byView?.[view];
@@ -262,6 +264,97 @@ export function summarizeIssues(metricsByView) {
   return tags.join(" / ");
 }
 
+// 計測値から姿勢7分類を判定する（IMG_0416 / IMG_0417 参照）。
+// 完全な医学的鑑別ではなく、整骨院向けの傾向把握用ラベル。
+export function classifyPostureType(metricsByView) {
+  const sideView = metricsByView?.right ? "right" : metricsByView?.left ? "left" : null;
+  const fh = sideView ? getMetric(metricsByView, sideView, "forward_head") : null;
+  const sf = sideView ? getMetric(metricsByView, sideView, "shoulder_forward") : null;
+  const tr = sideView ? getMetric(metricsByView, sideView, "trunk_lean") : null;
+  const kn = sideView ? getMetric(metricsByView, sideView, "knee_angle") : null;
+
+  const st = getMetric(metricsByView, "front", "shoulder_tilt");
+  const pt = getMetric(metricsByView, "front", "pelvic_tilt");
+  const ht = getMetric(metricsByView, "front", "head_tilt");
+  const ls = getMetric(metricsByView, "front", "lateral_shift");
+
+  const reasons = [];
+
+  // 左右差判定（前面ビューが必要）
+  const asymmetry =
+    (st && Math.abs(st.value) >= 2) ||
+    (pt && Math.abs(pt.value) >= 2) ||
+    (ht && Math.abs(ht.value) >= 3) ||
+    (ls && Math.abs(ls.value) >= 5);
+
+  // 矢状面（横向き）所見
+  const fhpHigh = fh && fh.value >= 10;
+  const shoulderForwardHigh = sf && sf.value >= 8;
+  const trunkForward = tr && tr.value >= 5; // 体幹前傾 → 反り腰寄りの代償
+  const trunkBack = tr && tr.value <= -3; // 体幹後傾 → スウェイバック寄り
+  const trunkFlat = tr && Math.abs(tr.value) < 2 && !fhpHigh && !shoulderForwardHigh;
+  const kneeHyper = kn && kn.value >= 178;
+
+  const sagittalFlags = [];
+  if (fhpHigh) sagittalFlags.push("kyphosis_signal");
+  if (shoulderForwardHigh) sagittalFlags.push("kyphosis_signal");
+  if (trunkForward) sagittalFlags.push("lordosis_signal");
+  if (trunkBack || kneeHyper) sagittalFlags.push("swayback_signal");
+  if (trunkFlat) sagittalFlags.push("flatback_signal");
+
+  const distinctSignals = new Set(sagittalFlags);
+
+  // 複合タイプ：矢状面の異なる signal が2系統以上、または矢状面異常＋左右差
+  if (
+    distinctSignals.size >= 2 ||
+    (asymmetry && distinctSignals.size >= 1)
+  ) {
+    if (fhpHigh || shoulderForwardHigh) reasons.push("猫背の傾向");
+    if (trunkForward) reasons.push("反り腰の傾向");
+    if (trunkBack || kneeHyper) reasons.push("スウェイバックの傾向");
+    if (trunkFlat) reasons.push("フラットバックの傾向");
+    if (asymmetry) reasons.push("左右差あり");
+    return { id: "combined", reasons };
+  }
+
+  if (asymmetry) {
+    if (st && Math.abs(st.value) >= 2) reasons.push(`肩の高さに差（${signed(st.value)}°）`);
+    if (pt && Math.abs(pt.value) >= 2) reasons.push(`骨盤の高さに差（${signed(pt.value)}°）`);
+    if (ht && Math.abs(ht.value) >= 3) reasons.push(`頭部傾斜（${signed(ht.value)}°）`);
+    if (ls && Math.abs(ls.value) >= 5) reasons.push(`上半身の左右シフト（${signed(ls.value)}%）`);
+    return { id: "asymmetry", reasons };
+  }
+
+  if (fhpHigh && shoulderForwardHigh) {
+    reasons.push(`頭部前方位 ${signed(fh.value)}%`);
+    reasons.push(`肩の前方変位 ${signed(sf.value)}%`);
+    return { id: "kyphosis", reasons };
+  }
+
+  if (trunkBack || kneeHyper) {
+    if (trunkBack) reasons.push(`体幹後傾 ${signed(tr.value)}°`);
+    if (kneeHyper) reasons.push(`膝過伸展 ${kn.value.toFixed(1)}°`);
+    return { id: "swayback", reasons };
+  }
+
+  if (trunkForward) {
+    reasons.push(`体幹前傾 ${signed(tr.value)}°`);
+    return { id: "lordosis", reasons };
+  }
+
+  if (fhpHigh) {
+    reasons.push(`頭部前方位 ${signed(fh.value)}%`);
+    return { id: "kyphosis", reasons };
+  }
+
+  if (trunkFlat) {
+    reasons.push("脊柱のS字カーブが目立たない");
+    return { id: "flatback", reasons };
+  }
+
+  return { id: "ideal", reasons: ["顕著な逸脱なし"] };
+}
+
 export function deriveRecommendations(metricsByView) {
   const issues = detectIssues(metricsByView);
   const weakAgg = aggregate(issues, "weak");
@@ -292,5 +385,17 @@ export function deriveRecommendations(metricsByView) {
     rng,
   );
 
-  return { weakMuscles, tightMuscles, trainingPlan };
+  const typeResult = classifyPostureType(metricsByView);
+  const typeDef = POSTURE_TYPE_BY_ID[typeResult.id] || POSTURE_TYPE_BY_ID.ideal;
+  const postureType = {
+    id: typeResult.id,
+    no: typeDef.no,
+    label: typeDef.label,
+    short: typeDef.short,
+    description: typeDef.description,
+    landmarks: typeDef.landmarks,
+    reasons: typeResult.reasons,
+  };
+
+  return { weakMuscles, tightMuscles, trainingPlan, postureType };
 }

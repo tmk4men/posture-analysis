@@ -549,6 +549,54 @@ button {
 .report-head--green .report-head__brand,
 .report-head--green .report-head__title { color: #1f4d27; }
 
+/* Posture-type badge (7分類) */
+.posture-type {
+  display: flex;
+  align-items: stretch;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  background: #fff7e6;
+  border: 1px solid #e6c98a;
+  border-left: 4px solid #c98a1e;
+  border-radius: 5px;
+}
+.posture-type__no {
+  flex: 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #c98a1e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13pt;
+  border-radius: 4px;
+}
+.posture-type__body { flex: 1; min-width: 0; }
+.posture-type__label {
+  font-weight: 700;
+  font-size: 10.5pt;
+  color: #1f2a36;
+  letter-spacing: 0.02em;
+}
+.posture-type__desc {
+  font-size: 9.2pt;
+  color: #5a6878;
+  margin-top: 0.1rem;
+  line-height: 1.45;
+}
+.posture-type__reasons {
+  font-size: 8.6pt;
+  color: #8a6628;
+  margin-top: 0.18rem;
+}
+.posture-type--ideal      { background: #ecf6ef; border-color: #b6d6bf; border-left-color: #2e6b3a; }
+.posture-type--ideal      .posture-type__no { background: #2e6b3a; }
+.posture-type--combined   { background: #f4ebf6; border-color: #d2b3da; border-left-color: #6a3a78; }
+.posture-type--combined   .posture-type__no { background: #6a3a78; }
+.posture-type--asymmetry  { background: #fbeeee; border-color: #e2b3b3; border-left-color: #a93a3a; }
+.posture-type--asymmetry  .posture-type__no { background: #a93a3a; }
+
 /* ===== Page 1 layout ===== */
 .report-page1-body {
   display: grid;
@@ -650,6 +698,33 @@ button {
 }
 .legend-swatch.swatch-weak { background: #3b8a4f; }
 .legend-swatch.swatch-tight { background: #d97a26; }
+
+/* Muscle name callouts on the anatomy overlay */
+.muscle-label__leader {
+  stroke: #6b6259;
+  stroke-width: 1.2;
+  fill: none;
+  opacity: 0.7;
+}
+.muscle-label__bg {
+  fill: #ffffff;
+  stroke: #6b6259;
+  stroke-width: 1;
+  opacity: 0.92;
+}
+.muscle-label__text {
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  fill: #1f2a36;
+  dominant-baseline: middle;
+}
+.muscle-label--weak  .muscle-label__bg     { stroke: #3b8a4f; }
+.muscle-label--weak  .muscle-label__leader { stroke: #3b8a4f; }
+.muscle-label--weak  .muscle-label__text   { fill: #1d5a2c; }
+.muscle-label--tight .muscle-label__bg     { stroke: #d97a26; }
+.muscle-label--tight .muscle-label__leader { stroke: #d97a26; }
+.muscle-label--tight .muscle-label__text   { fill: #8a4912; }
 
 /* Muscle lists (鍛/ほぐ) */
 .muscle-lists {
