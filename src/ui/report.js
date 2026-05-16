@@ -54,12 +54,11 @@ function muscleCardHtml(item, role) {
   `;
 }
 
-function trainingCardHtml(plan, index) {
+function trainingCardHtml(plan) {
   const asset = ASSET_BY_ID[plan.assetId];
   if (!asset) return "";
   return `
     <li class="training-card">
-      <span class="training-card__num">${index + 1}</span>
       <img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">
     </li>
   `;
@@ -140,7 +139,7 @@ export function renderReport({ findings, patient, photos }) {
   `;
 
   const trainingCards = findings.trainingPlan
-    .map((p, i) => trainingCardHtml(p, i))
+    .map((p) => trainingCardHtml(p))
     .join("");
 
   const page2 = `
@@ -156,7 +155,7 @@ export function renderReport({ findings, patient, photos }) {
       </ul>
 
       <footer class="report-foot">
-        <small>※ 週2回、①〜④の順で無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
+        <small>※ 週2回、無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
       </footer>
     </article>
   `;

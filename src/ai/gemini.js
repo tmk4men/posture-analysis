@@ -2,62 +2,37 @@
 //   - "proxy"  : POST to a Cloudflare Worker that holds the API key (recommended for handover)
 //   - "direct" : call the AI provider's API directly from the browser using the operator's own key
 // Providers supported in both modes: gemini / openai / anthropic.
+//
+// The AI is responsible ONLY for the diagnosis narrative.  Muscle and exercise
+// selections come from deterministic rules in src/pose/recommend.js so that
+// different patients always produce visibly different reports.
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod] = await Promise.all([
-  import("../data/muscles.js" + V),
-  import("../data/exerciseAssets.js" + V),
-]);
-const { MUSCLES, muscleIds } = musclesMod;
-const { EXERCISE_ASSETS, assetIds } = assetsMod;
+const recommendMod = await import("../pose/recommend.js" + V);
+const { deriveRecommendations, summarizeIssues } = recommendMod;
 
-const MUSCLE_TABLE = MUSCLES.map(
-  (m) => `- id: "${m.id}"  label: "${m.label}"  side: ${m.side}`
-).join("\n");
-
-// Show AI only what it needs to pick well: id, label, category, and which
-// muscles each asset targets (so it can match against weak/tight muscles).
-const ASSET_TABLE = EXERCISE_ASSETS.map((a) => {
-  const targets = [];
-  if (a.strengthens.length) targets.push(`鍛=${a.strengthens.join(",")}`);
-  if (a.stretches.length) targets.push(`ほぐす=${a.stretches.join(",")}`);
-  if (!targets.length) targets.push("（有酸素）");
-  return `- id: "${a.id}"  label: "${a.label}"  種別: ${a.category}  ${targets.join(" ")}`;
-}).join("\n");
-
-const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートを作成するアシスタントです。
+const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートの「診断文」を作成するアシスタントです。
 
 【入力】
-渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
+- 渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
+- "detectedIssues" は、計測値から自動検出された姿勢上の所見の要約です。診断文はこの所見と矛盾しないように書いてください。
 
 【出力ルール】
 必ず以下の JSON フォーマットのみを返してください（説明文・コードフェンス禁止）。
 {
-  "diagnosis": "...",
-  "weakMuscles": [ { "id": "...", "note": "..." } ],
-  "tightMuscles": [ { "id": "...", "note": "..." } ],
-  "trainingPlan": [ { "assetId": "..." }, { "assetId": "..." }, { "assetId": "..." }, { "assetId": "..." } ]
+  "diagnosis": "..."
 }
 
-各フィールド要件：
-- diagnosis: 計測値から読み取れる姿勢の特徴と影響を、患者向けに平易な日本語で 3〜4文。参考例「この方は、頭がやや前に出やすく、首の前傾や肩の巻き込み、背中の丸まり傾向が見られます。…」
-- weakMuscles: 鍛えるべき筋肉。下記筋肉カタログの id から 2〜5個 選択。note には「なぜ弱化しているか／鍛える狙い」を15文字程度。
-- tightMuscles: ほぐすべき筋肉。同じく id から 2〜5個 選択。note には「なぜ硬くなっているか／ほぐす狙い」を15文字程度。
-- trainingPlan: 必ず ちょうど4要素。下記エクササイズカタログの id を選ぶだけでよい（運動内容・回数の生成は不要、画像に焼き込み済み）。
-  - 推奨配分: 弱化筋を鍛える strength 2〜3種 + 硬い筋をほぐす stretch 1〜2種
-  - 弱化筋に対応する strengthens を含むアセットを優先
-  - 硬い筋に対応する stretches を含むアセットを優先
-  - 同じ id を重複させない
-
-【利用可能な筋肉カタログ】
-${MUSCLE_TABLE}
-
-【利用可能なエクササイズ・アセットカタログ（必ずこの id から選択）】
-${ASSET_TABLE}
+diagnosis の要件：
+- 患者に向けた平易な日本語で 3〜4文（合計 120〜180 文字程度）。
+- detectedIssues に挙がっている所見を必ず1つ以上具体的に言及する（例：「頭がやや前に出ています」「肩が前方に巻き込まれています」など）。
+- 検出された数値そのもの（"+12.3%" など）はレポート本文に出さず、患者向けの自然な表現に置き換える。
+- 影響の説明と、改善できる前向きな見通しを1文添える。
+- 参考例「この方は、頭がやや前に出やすく、首の前傾や肩の巻き込み、背中の丸まり傾向が見られます。これらは長時間のデスクワークや姿勢のクセが原因と考えられます。週2回程度のトレーニングと、緊張した筋肉のストレッチを継続することで、徐々に改善が期待できます。」
 
 注意：
-- 筋肉idは weakMuscles と tightMuscles で重複させない。
-- 計測値が乏しい場合でも、典型的な姿勢パターンから一般的な推奨を返してください。`;
+- 筋肉名やエクササイズ名は出力に含めないでください（別パイプラインで自動付与されます）。
+- detectedIssues に何も挙がっていない場合は、典型的な現代姿勢（軽度の頭部前方位・巻き肩など）への一般的な助言を返してください。`;
 
 const DEFAULT_MODELS = {
   gemini: "gemini-2.5-flash",
@@ -76,6 +51,7 @@ function buildUserPayload(patient, metricsByView) {
       date: patient.date || null,
     },
     metrics: metricsByView,
+    detectedIssues: summarizeIssues(metricsByView),
     閾値の目安: {
       肩の傾き: "±2° 以上で左右差あり",
       骨盤の傾き: "±2° 以上で左右差あり",
@@ -102,42 +78,15 @@ function tryParseJson(text) {
   }
 }
 
-// Normalise AI output and drop entries whose id is not in the catalogue.
-function sanitizeFindings(parsed) {
-  if (!parsed || typeof parsed !== "object") return null;
-  const validMuscleIds = new Set(muscleIds());
-  const validAssetIds = new Set(assetIds());
-
-  const filterMuscles = (arr) =>
-    Array.isArray(arr)
-      ? arr
-          .filter((x) => x && typeof x.id === "string" && validMuscleIds.has(x.id))
-          .map((x) => ({ id: x.id, note: String(x.note ?? "") }))
-      : [];
-
-  // Accept either { assetId } (new schema) or { machineId } (legacy/typo fallback).
-  const trainingPlan = Array.isArray(parsed.trainingPlan)
-    ? parsed.trainingPlan
-        .map((x) => {
-          if (!x) return null;
-          const id = typeof x.assetId === "string" ? x.assetId
-                   : typeof x.machineId === "string" ? x.machineId
-                   : typeof x.id === "string" ? x.id
-                   : null;
-          return id && validAssetIds.has(id) ? { assetId: id } : null;
-        })
-        .filter(Boolean)
-        // de-dup
-        .filter((x, i, a) => a.findIndex((y) => y.assetId === x.assetId) === i)
-        .slice(0, 4)
-    : [];
-
-  return {
-    diagnosis: String(parsed.diagnosis ?? ""),
-    weakMuscles: filterMuscles(parsed.weakMuscles),
-    tightMuscles: filterMuscles(parsed.tightMuscles),
-    trainingPlan,
-  };
+function extractDiagnosis(parsed, rawText) {
+  if (parsed && typeof parsed === "object" && typeof parsed.diagnosis === "string") {
+    return parsed.diagnosis.trim();
+  }
+  // Fall back to the raw text if the AI returned plain prose instead of JSON.
+  if (typeof rawText === "string" && rawText.trim()) {
+    return rawText.trim().slice(0, 400);
+  }
+  return "";
 }
 
 // ---- Proxy mode --------------------------------------------------------
@@ -169,7 +118,7 @@ async function callGemini({ model, apiKey, system, user }) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+      generationConfig: { temperature: 0.7, responseMimeType: "application/json" },
     }),
   });
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text()}`);
@@ -186,7 +135,7 @@ async function callOpenAI({ model, apiKey, system, user }) {
     },
     body: JSON.stringify({
       model,
-      temperature: 0.4,
+      temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -211,7 +160,7 @@ async function callAnthropic({ model, apiKey, system, user }) {
     body: JSON.stringify({
       model,
       max_tokens: 2048,
-      temperature: 0.4,
+      temperature: 0.7,
       system,
       messages: [{ role: "user", content: user }],
     }),
@@ -225,42 +174,68 @@ async function callAnthropic({ model, apiKey, system, user }) {
 
 export async function generateFindings(settings, patient, metricsByView) {
   const { mode, provider } = settings;
+
+  // Deterministic picks happen regardless of AI availability.
+  const rec = deriveRecommendations(metricsByView);
+
   if (provider === "none") {
-    return { findings: null, raw: "AIプロバイダーが「使用しない」に設定されています。計測値のみを参照してください。" };
+    return {
+      findings: {
+        diagnosis:
+          "AI診断はオフです。計測値に基づき、姿勢パターンから推定した筋肉とトレーニングを表示しています。",
+        ...rec,
+      },
+      raw: "AIプロバイダーが「使用しない」に設定されています。",
+    };
   }
+
   const model = settings.model || DEFAULT_MODELS[provider];
   if (!model) throw new Error(`未対応のプロバイダー: ${provider}`);
 
   const userText = JSON.stringify(buildUserPayload(patient, metricsByView), null, 2);
 
   let raw;
-  if (mode === "proxy") {
-    if (!settings.proxyUrl) {
-      throw new Error("プロキシURLが未設定です。「設定」で接続方法を確認してください。");
-    }
-    raw = await callProxy({
-      proxyUrl: settings.proxyUrl,
-      provider,
-      model,
-      system: SYSTEM_PROMPT,
-      user: userText,
-    });
-  } else {
-    if (!settings.apiKey) {
-      throw new Error("APIキーが未設定です。「設定」から登録するか、接続方法を「プロキシ経由」にしてください。");
-    }
-    if (provider === "gemini") {
-      raw = await callGemini({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
-    } else if (provider === "openai") {
-      raw = await callOpenAI({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
-    } else if (provider === "anthropic") {
-      raw = await callAnthropic({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+  try {
+    if (mode === "proxy") {
+      if (!settings.proxyUrl) {
+        throw new Error("プロキシURLが未設定です。「設定」で接続方法を確認してください。");
+      }
+      raw = await callProxy({
+        proxyUrl: settings.proxyUrl,
+        provider,
+        model,
+        system: SYSTEM_PROMPT,
+        user: userText,
+      });
     } else {
-      throw new Error(`未対応のプロバイダー: ${provider}`);
+      if (!settings.apiKey) {
+        throw new Error("APIキーが未設定です。「設定」から登録するか、接続方法を「プロキシ経由」にしてください。");
+      }
+      if (provider === "gemini") {
+        raw = await callGemini({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+      } else if (provider === "openai") {
+        raw = await callOpenAI({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+      } else if (provider === "anthropic") {
+        raw = await callAnthropic({ model, apiKey: settings.apiKey, system: SYSTEM_PROMPT, user: userText });
+      } else {
+        throw new Error(`未対応のプロバイダー: ${provider}`);
+      }
     }
+  } catch (err) {
+    // AI failure should still produce a readable report — fall back to a
+    // deterministic diagnosis stub plus the rule-based picks.
+    const diagnosis = "AI診断文の生成に失敗したため、計測値ベースの推奨内容のみ表示しています。施術者の所見と合わせてご参照ください。";
+    return { findings: { diagnosis, ...rec }, raw: `エラー: ${err.message}` };
   }
 
   const parsed = tryParseJson(raw);
-  const findings = sanitizeFindings(parsed);
-  return { findings, raw };
+  const diagnosis = extractDiagnosis(parsed, raw);
+
+  return {
+    findings: {
+      diagnosis: diagnosis || "計測値に基づき、姿勢パターンから推定した筋肉とトレーニングを表示しています。",
+      ...rec,
+    },
+    raw,
+  };
 }
