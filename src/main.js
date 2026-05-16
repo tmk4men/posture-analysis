@@ -192,6 +192,7 @@ async function onAnalyze() {
   const patient = {
     name: document.getElementById("patient-name").value,
     date: document.getElementById("patient-date").value,
+    gender: document.getElementById("patient-gender").value,
     painAreas: collectPainAreas(),
   };
   const summary = summarizeAll(state.metricsByView);

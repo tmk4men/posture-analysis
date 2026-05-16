@@ -53,6 +53,7 @@ function buildUserPayload(patient, metricsByView, painAreas) {
     patient: {
       name: patient.name || null,
       date: patient.date || null,
+      gender: patient.gender || null,
     },
     metrics: metricsByView,
     detectedIssues: summarizeIssues(metricsByView),

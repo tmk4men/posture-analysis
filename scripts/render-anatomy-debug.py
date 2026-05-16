@@ -14,8 +14,10 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 ANATOMY_JS = ROOT / "src" / "ui" / "anatomy.js"
-FRONT_IMG = ROOT / "assets" / "anatomy-front.webp"
-BACK_IMG = ROOT / "assets" / "anatomy-back.webp"
+IMAGES = {
+    "male":   (ROOT / "assets" / "anatomy-front.webp",        ROOT / "assets" / "anatomy-back.webp"),
+    "female": (ROOT / "assets" / "anatomy-female-front.webp", ROOT / "assets" / "anatomy-female-back.webp"),
+}
 OUT_DIR = ROOT / ".debug-anatomy"
 
 DEBUG_COLORS = {
@@ -80,21 +82,22 @@ def main():
     back_muscles = extract_template(js, "BACK_MUSCLES")
 
     OUT_DIR.mkdir(exist_ok=True)
-    for name, img_path, html in [
-        ("front", FRONT_IMG, front_muscles),
-        ("back",  BACK_IMG,  back_muscles),
-    ]:
-        uri, size = img_to_data_uri(img_path)
-        svg = build_svg(html, uri, size)
-        (OUT_DIR / f"{name}.svg").write_text(svg, encoding="utf-8")
-        # Render at 2× so Claude's Read renders crisply at thumbnail size
-        out_w = size[0] * 2
-        cairosvg.svg2png(
-            bytestring=svg.encode("utf-8"),
-            write_to=str(OUT_DIR / f"{name}.png"),
-            output_width=out_w,
-        )
-        print(f"wrote {OUT_DIR / (name + '.png')}  ({out_w}x{size[1]*2})")
+    for gender, (front_path, back_path) in IMAGES.items():
+        for name, img_path, html in [
+            ("front", front_path, front_muscles),
+            ("back",  back_path,  back_muscles),
+        ]:
+            uri, size = img_to_data_uri(img_path)
+            svg = build_svg(html, uri, size)
+            stem = f"{gender}-{name}"
+            (OUT_DIR / f"{stem}.svg").write_text(svg, encoding="utf-8")
+            out_w = size[0] * 2
+            cairosvg.svg2png(
+                bytestring=svg.encode("utf-8"),
+                write_to=str(OUT_DIR / f"{stem}.png"),
+                output_width=out_w,
+            )
+            print(f"wrote {OUT_DIR / (stem + '.png')}  ({out_w}x{size[1]*2})")
 
 
 if __name__ == "__main__":

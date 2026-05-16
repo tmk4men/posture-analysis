@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260516-1556" />
+  <link rel="stylesheet" href="app.css?v=20260516-1644" />
 </head>
 <body>
   <header class="app-header no-print">
@@ -55,6 +55,13 @@
       <div class="field">
         <label for="patient-date">撮影日</label>
         <input id="patient-date" type="date" />
+      </div>
+      <div class="field">
+        <label for="patient-gender">性別</label>
+        <select id="patient-gender">
+          <option value="male" selected>男性</option>
+          <option value="female">女性</option>
+        </select>
       </div>
       <div class="field field--full">
         <label>気になる不調・痛みの部位（任意・複数選択可）</label>
@@ -150,6 +157,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="src/main.js?v=20260516-1556"></script>
+  <script type="module" src="src/main.js?v=20260516-1644"></script>
 </body>
 </html>

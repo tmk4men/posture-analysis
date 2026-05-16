@@ -12,8 +12,14 @@ const COLOR_WEAK = "#3b8a4f"; // green — 鍛えるべき筋肉
 const COLOR_TIGHT = "#d97a26"; // orange — ほぐすべき筋肉
 
 // Base image paths (relative to the deployed site root).
-const FRONT_IMG = `assets/anatomy-front.webp${V}`;
-const BACK_IMG = `assets/anatomy-back.webp${V}`;
+const FRONT_IMG = {
+  male: `assets/anatomy-front.webp${V}`,
+  female: `assets/anatomy-female-front.webp${V}`,
+};
+const BACK_IMG = {
+  male: `assets/anatomy-back.webp${V}`,
+  female: `assets/anatomy-female-back.webp${V}`,
+};
 
 // SVG viewBox matches each image's pixel dimensions so muscle overlay paths
 // can be specified in raw image coordinates.
@@ -35,7 +41,7 @@ const FRONT_LABEL_ANCHORS = {
   abdominals:           { anchorX: 220, anchorY: 470, labelX: 70,  labelY: 480, align: "end"   },
   iliopsoas:            { anchorX: 240, anchorY: 605, labelX: 372, labelY: 605, align: "start" },
   quadriceps:           { anchorX: 280, anchorY: 790, labelX: 372, labelY: 790, align: "start" },
-  adductors:            { anchorX: 220, anchorY: 800, labelX: 70,  labelY: 800, align: "end"   },
+  adductors:            { anchorX: 195, anchorY: 800, labelX: 70,  labelY: 800, align: "end"   },
 };
 
 const BACK_LABEL_ANCHORS = {
@@ -129,14 +135,16 @@ const FRONT_MUSCLES = `
            C 222 800, 222 685, 225 670
            C 244 665, 288 665, 312 670 Z"/>
   <path id="m-adductors"
-        d="M 188 685
-           C 184 760, 192 840, 205 870
-           L 220 870
-           L 220 685 Z
-           M 252 685
-           C 256 760, 248 840, 235 870
-           L 220 870
-           L 220 685 Z"/>
+        d="M 170 680
+           C 174 770, 188 855, 205 885
+           L 215 885
+           C 218 800, 218 685, 215 680
+           L 170 680 Z
+           M 270 680
+           C 266 770, 252 855, 235 885
+           L 225 885
+           C 222 800, 222 685, 225 680
+           L 270 680 Z"/>
 </g>
 `;
 
@@ -196,36 +204,36 @@ const BACK_MUSCLES = `
            C 310 410, 310 330, 318 322
            C 335 316, 358 316, 370 320 Z"/>
   <path id="m-erector_spinae"
-        d="M 200 275
-           C 196 360, 192 470, 198 580
-           L 218 580
-           L 218 275 Z
-           M 244 275
-           C 248 360, 252 470, 246 580
-           L 226 580
-           L 226 275 Z"/>
-  <path id="m-glutes"
-        d="M 132 555
-           C 120 660, 165 715, 206 715
-           C 218 715, 220 700, 220 678
+        d="M 195 275
+           C 190 360, 186 480, 195 590
            L 220 590
-           C 192 555, 154 555, 132 555 Z
-           M 312 555
-           C 324 660, 279 715, 238 715
-           C 226 715, 224 700, 224 678
+           L 220 275 Z
+           M 249 275
+           C 254 360, 258 480, 249 590
            L 224 590
-           C 252 555, 290 555, 312 555 Z"/>
+           L 224 275 Z"/>
+  <path id="m-glutes"
+        d="M 132 560
+           C 112 680, 165 730, 208 730
+           C 220 730, 222 712, 222 682
+           L 222 582
+           C 196 555, 156 555, 132 560 Z
+           M 314 560
+           C 334 680, 281 730, 238 730
+           C 226 730, 224 712, 224 682
+           L 224 582
+           C 250 555, 290 555, 314 560 Z"/>
   <path id="m-gluteus_medius"
-        d="M 110 540
-           C 100 605, 118 645, 138 645
-           L 152 645
-           C 154 615, 150 575, 138 545
-           C 128 538, 116 538, 110 540 Z
-           M 336 540
-           C 346 605, 328 645, 308 645
-           L 294 645
-           C 292 615, 296 575, 308 545
-           C 318 538, 330 538, 336 540 Z"/>
+        d="M 108 540
+           C 96 608, 116 650, 140 650
+           L 158 650
+           C 160 618, 154 572, 140 545
+           C 126 535, 114 535, 108 540 Z
+           M 338 540
+           C 350 608, 330 650, 306 650
+           L 288 650
+           C 286 618, 292 572, 306 545
+           C 320 535, 332 535, 338 540 Z"/>
   <path id="m-hamstrings"
         d="M 144 720
            C 134 800, 148 880, 170 895
@@ -289,19 +297,19 @@ function escapeXml(s) {
   }[c]));
 }
 
-function frontSvg(weakSet, tightSet) {
+function frontSvg(weakSet, tightSet, gender) {
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${FRONT_W} ${FRONT_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-  <image href="${FRONT_IMG}" x="0" y="0" width="${FRONT_W}" height="${FRONT_H}" preserveAspectRatio="xMidYMid meet"/>
+  <image href="${FRONT_IMG[gender]}" x="0" y="0" width="${FRONT_W}" height="${FRONT_H}" preserveAspectRatio="xMidYMid meet"/>
   ${FRONT_MUSCLES}
   ${buildLabels(FRONT_LABEL_ANCHORS, weakSet, tightSet)}
 </svg>`;
 }
 
-function backSvg(weakSet, tightSet) {
+function backSvg(weakSet, tightSet, gender) {
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${BACK_W} ${BACK_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-  <image href="${BACK_IMG}" x="0" y="0" width="${BACK_W}" height="${BACK_H}" preserveAspectRatio="xMidYMid meet"/>
+  <image href="${BACK_IMG[gender]}" x="0" y="0" width="${BACK_W}" height="${BACK_H}" preserveAspectRatio="xMidYMid meet"/>
   ${BACK_MUSCLES}
   ${buildLabels(BACK_LABEL_ANCHORS, weakSet, tightSet)}
 </svg>`;
@@ -309,9 +317,10 @@ function backSvg(weakSet, tightSet) {
 
 // Build the full anatomy panel HTML with front+back side by side and a legend.
 // `weakIds` and `tightIds` are arrays of muscle IDs (matching `m-<id>` paths).
-export function renderAnatomyPanel(weakIds = [], tightIds = []) {
+export function renderAnatomyPanel(weakIds = [], tightIds = [], gender = "male") {
   const weakSet = new Set(weakIds);
   const tightSet = new Set(tightIds);
+  const g = FRONT_IMG[gender] ? gender : "male";
 
   // Highlighted overlays use mix-blend-mode: multiply so the underlying
   // illustration's shading still shows through the colour wash.
@@ -331,8 +340,8 @@ export function renderAnatomyPanel(weakIds = [], tightIds = []) {
 <div class="anatomy-panel">
   <style>${styleRules}</style>
   <div class="anatomy-views">
-    <div class="anatomy-view">${frontSvg(weakSet, tightSet)}<div class="anatomy-view__caption">前面</div></div>
-    <div class="anatomy-view">${backSvg(weakSet, tightSet)}<div class="anatomy-view__caption">背面</div></div>
+    <div class="anatomy-view">${frontSvg(weakSet, tightSet, g)}<div class="anatomy-view__caption">前面</div></div>
+    <div class="anatomy-view">${backSvg(weakSet, tightSet, g)}<div class="anatomy-view__caption">背面</div></div>
   </div>
   <div class="anatomy-legend">
     <span class="legend-item"><span class="legend-swatch swatch-weak"></span>鍛えるべき筋肉</span>

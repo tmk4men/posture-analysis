@@ -122,7 +122,7 @@ export function renderReport({ findings, patient, photos }) {
 
           ${painChipsHtml}
 
-          ${renderAnatomyPanel(weakIds, tightIds)}
+          ${renderAnatomyPanel(weakIds, tightIds, patient?.gender)}
         </div>
       </section>
 
