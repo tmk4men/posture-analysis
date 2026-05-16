@@ -10,7 +10,7 @@
 // Rate limit: per-IP 30 req/min via Cloudflare Cache hack (best-effort, not bulletproof but enough for a mock).
 
 const DEFAULT_MODELS = {
-  gemini: "gemini-2.5-flash",
+  gemini: "gemini-3-flash-preview",
   openai: "gpt-4o-mini",
   anthropic: "claude-haiku-4-5-20251001",
 };

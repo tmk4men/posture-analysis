@@ -33,7 +33,7 @@ curl https://posture-analysis-proxy.<your-subdomain>.workers.dev/health
 ```json
 {
   "provider": "gemini",
-  "model": "gemini-2.5-flash",   // 省略可（デフォルト適用）
+  "model": "gemini-3-flash-preview",   // 省略可（デフォルト適用）
   "system": "システムプロンプト",
   "user": "ユーザープロンプト（計測値JSONなど）"
 }
