@@ -9,15 +9,15 @@
 
 const V = new URL(import.meta.url).search;
 const recommendMod = await import("../pose/recommend.js" + V);
-const { deriveRecommendations, summarizeIssues, classifyPostureType } = recommendMod;
+const { deriveRecommendations, summarizeIssues, painAreaLabels } = recommendMod;
 
 const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢分析レポートの「診断文」を作成するアシスタントです。
 
 【入力】
 - 渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
-- "detectedIssues" は、計測値から自動検出された姿勢上の所見の要約です。
-- "postureType" は内部参考用の姿勢分類（猫背・反り腰・スウェイバック・フラットバック・左右差・複合）です。**この分類名そのものをレポート本文に出さないでください**。あくまで診断文の方向性を決める内部参考情報です。
-- 診断文は postureType の傾向と detectedIssues の両方と矛盾しないように書いてください。
+- "detectedIssues" は、計測値そのものから自動抽出された姿勢上の所見の要約です（指標ごとに独立、姿勢パターン分類は行っていません）。
+- "painAreas" は、患者本人が申告した不調・痛みの部位ラベルのリストです（任意）。空配列もありえます。
+- 診断文は detectedIssues と painAreas の両方と矛盾しないように書いてください。
 
 【出力ルール】
 必ず以下の JSON フォーマットのみを返してください（説明文・コードフェンス禁止）。
@@ -28,14 +28,15 @@ const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢
 diagnosis の要件：
 - 患者に向けた平易な日本語で 3〜4文（合計 120〜180 文字程度）。
 - detectedIssues に挙がっている所見を **必ず1〜2つ具体的に言及** する（例：「頭がやや前に出ています」「肩が前方に巻き込まれています」「左右の肩の高さに差があります」など）。**患者ごとに異なる所見**を選んで触れること。
+- painAreas が入っている場合は、その不調部位に **必ず1つは触れる**（例：「ご申告の腰の不調に関連して…」「肩こりの背景には…」）。検出値と関連づけて自然に繋ぐこと。
 - 検出された数値そのもの（"+12.3%" など）はレポート本文に出さず、患者向けの自然な表現に置き換える。
-- 「猫背タイプ」「反り腰タイプ」のような分類ラベルそのものは使わず、見られた特徴を素直に描写する（例：「背中が丸くなりやすい姿勢」「腰の反りが強めの姿勢」）。
+- 「猫背タイプ」「反り腰タイプ」のような姿勢分類ラベルは使わず、見られた特徴を素直に描写する（例：「背中が丸くなりやすい姿勢」「腰の反りが強めの姿勢」）。
 - 影響の説明と、改善できる前向きな見通しを1文添える。
 - 参考例「左右で肩の高さに差が見られ、頭もやや前方へ出やすい姿勢です。デスクワークなどで片側に負担が集中している可能性があります。週2回のトレーニングと、緊張した筋肉のストレッチを続けることで、徐々に整っていく見通しです。」
 
 注意：
 - 筋肉名やエクササイズ名は出力に含めないでください（別パイプラインで自動付与されます）。
-- detectedIssues に何も挙がっていない場合は、理想姿勢に近い旨を伝えつつ、典型的な現代姿勢（軽度の頭部前方位・巻き肩など）の予防的助言を返してください。`;
+- detectedIssues に何も挙がっていない場合は、理想姿勢に近い旨を伝えつつ、painAreas があればそれに触れた予防的助言を返してください。`;
 
 const DEFAULT_MODELS = {
   gemini: "gemini-3.1-flash-lite",
@@ -47,8 +48,7 @@ export function getDefaultModel(provider) {
   return DEFAULT_MODELS[provider] ?? "";
 }
 
-function buildUserPayload(patient, metricsByView) {
-  const type = classifyPostureType(metricsByView);
+function buildUserPayload(patient, metricsByView, painAreas) {
   return {
     patient: {
       name: patient.name || null,
@@ -56,10 +56,7 @@ function buildUserPayload(patient, metricsByView) {
     },
     metrics: metricsByView,
     detectedIssues: summarizeIssues(metricsByView),
-    postureType: {
-      id: type.id,
-      reasons: type.reasons,
-    },
+    painAreas: painAreaLabels(painAreas),
     閾値の目安: {
       肩の傾き: "±2° 以上で左右差あり",
       骨盤の傾き: "±2° 以上で左右差あり",
@@ -182,15 +179,16 @@ async function callAnthropic({ model, apiKey, system, user }) {
 
 export async function generateFindings(settings, patient, metricsByView) {
   const { mode, provider } = settings;
+  const painAreas = patient.painAreas || [];
 
   // Deterministic picks happen regardless of AI availability.
-  const rec = deriveRecommendations(metricsByView);
+  const rec = deriveRecommendations(metricsByView, painAreas);
 
   if (provider === "none") {
     return {
       findings: {
         diagnosis:
-          "AI診断はオフです。計測値に基づき、姿勢パターンから推定した筋肉とトレーニングを表示しています。",
+          "AI診断はオフです。計測値と申告された不調部位に基づき、推定した筋肉とトレーニングを表示しています。",
         ...rec,
       },
       raw: "AIプロバイダーが「使用しない」に設定されています。",
@@ -200,7 +198,7 @@ export async function generateFindings(settings, patient, metricsByView) {
   const model = settings.model || DEFAULT_MODELS[provider];
   if (!model) throw new Error(`未対応のプロバイダー: ${provider}`);
 
-  const userText = JSON.stringify(buildUserPayload(patient, metricsByView), null, 2);
+  const userText = JSON.stringify(buildUserPayload(patient, metricsByView, painAreas), null, 2);
 
   let raw;
   try {

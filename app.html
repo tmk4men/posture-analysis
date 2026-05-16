@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260516-1455" />
+  <link rel="stylesheet" href="app.css?v=20260516-1551" />
 </head>
 <body>
   <header class="app-header no-print">
@@ -55,6 +55,11 @@
       <div class="field">
         <label for="patient-date">撮影日</label>
         <input id="patient-date" type="date" />
+      </div>
+      <div class="field field--full">
+        <label>気になる不調・痛みの部位（任意・複数選択可）</label>
+        <div id="pain-areas" class="chip-group"></div>
+        <small>患者さんご自身が訴える部位を選ぶと、姿勢計測の結果に上乗せして人体図にハイライトされます。</small>
       </div>
       <label class="consent">
         <input id="consent-check" type="checkbox" />
@@ -145,6 +150,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="src/main.js?v=20260516-1455"></script>
+  <script type="module" src="src/main.js?v=20260516-1551"></script>
 </body>
 </html>

@@ -434,103 +434,114 @@ export function summarizeIssues(metricsByView) {
   return tags.join(" / ");
 }
 
-// 計測値から姿勢7分類を判定する（IMG_0416 / IMG_0417 参照）。
-// 完全な医学的鑑別ではなく、整骨院向けの傾向把握用ラベル。
-// 各タイプにスコア（= 関連計測値の最大ratio）を出し、最大スコアのタイプを採用。
-// 2位以上のスコアが拮抗（>=0.85x）して両方とも閾値超え（>=1.0）の場合だけ複合。
-export function classifyPostureType(metricsByView) {
-  const sideView = metricsByView?.right ? "right" : metricsByView?.left ? "left" : null;
-  const fh = sideView ? getMetric(metricsByView, sideView, "forward_head") : null;
-  const sf = sideView ? getMetric(metricsByView, sideView, "shoulder_forward") : null;
-  const tr = sideView ? getMetric(metricsByView, sideView, "trunk_lean") : null;
-  const kn = sideView ? getMetric(metricsByView, sideView, "knee_angle") : null;
+// 患者から申告された主訴部位（肩こり・腰痛・膝痛など）を、解剖学的に対応する
+// 筋肉ハイライトに変換する。型分類は使わず、入力された部位ごとに該当筋肉を
+// 個別に severity = 1.0（= 臨床閾値相当）で重ねる。これにより、姿勢計測値が
+// 似た患者でも申告された不調部位の違いが人体図にそのまま現れる。
+const PAIN_AREA_MAP = {
+  neck: {
+    label: "首こり・首の痛み",
+    weak: [["deep_neck_flexors", "首の不調：頸部前面の支持力を回復"]],
+    tight: [["upper_traps", "首の不調：頸部後面に過緊張"]],
+  },
+  shoulder: {
+    label: "肩こり",
+    weak: [
+      ["scapular_stabilizers", "肩の不調：肩甲骨の安定性を取り戻す"],
+      ["posterior_deltoid", "肩の不調：肩後方の引き戻し力が不足"],
+    ],
+    tight: [
+      ["upper_traps", "肩の不調：僧帽筋上部・肩甲挙筋に過緊張"],
+      ["pectorals", "肩の不調：胸前面の短縮で巻き肩を助長"],
+    ],
+  },
+  midback: {
+    label: "背中の張り",
+    weak: [["scapular_stabilizers", "背中の張り：肩甲骨周囲の活性が不足"]],
+    tight: [
+      ["lats", "背中の張り：広背筋の短縮"],
+      ["erector_spinae", "背中の張り：脊柱起立筋の過緊張"],
+    ],
+  },
+  lowback: {
+    label: "腰痛",
+    weak: [
+      ["abdominals", "腰痛：体幹前面の支持が不足"],
+      ["glutes", "腰痛：股関節伸展の力が不足"],
+    ],
+    tight: [
+      ["erector_spinae", "腰痛：腰背部の過緊張"],
+      ["iliopsoas", "腰痛：股関節屈筋の短縮で骨盤前傾を助長"],
+    ],
+  },
+  hip: {
+    label: "股関節の違和感",
+    weak: [
+      ["glutes", "股関節の不調：大臀筋の支持力が不足"],
+      ["gluteus_medius", "股関節の不調：中臀筋の側方安定性が不足"],
+    ],
+    tight: [
+      ["iliopsoas", "股関節の不調：股関節屈筋の短縮"],
+      ["adductors", "股関節の不調：内転筋の短縮"],
+    ],
+  },
+  knee: {
+    label: "膝の痛み",
+    weak: [["quadriceps", "膝の不調：膝伸展・支持の力が不足"]],
+    tight: [
+      ["quadriceps", "膝の不調：大腿四頭筋の張りが膝関節に負担"],
+      ["hamstrings", "膝の不調：もも裏の短縮が膝屈曲を助長"],
+      ["calves", "膝の不調：下腿後面の短縮"],
+    ],
+  },
+  calf: {
+    label: "ふくらはぎの張り",
+    weak: [],
+    tight: [["calves", "ふくらはぎの張り：下腿三頭筋の短縮"]],
+  },
+  thigh_front: {
+    label: "太もも前の張り",
+    weak: [],
+    tight: [["quadriceps", "太もも前の張り：大腿四頭筋の短縮"]],
+  },
+  thigh_back: {
+    label: "太もも裏の張り",
+    weak: [],
+    tight: [["hamstrings", "太もも裏の張り：ハムストリングスの短縮"]],
+  },
+};
 
-  const st = getMetric(metricsByView, "front", "shoulder_tilt");
-  const pt = getMetric(metricsByView, "front", "pelvic_tilt");
-  const ht = getMetric(metricsByView, "front", "head_tilt");
-  const ls = getMetric(metricsByView, "front", "lateral_shift");
+export const PAIN_AREA_OPTIONS = Object.entries(PAIN_AREA_MAP).map(([id, def]) => ({
+  id,
+  label: def.label,
+}));
 
-  const ratio = (v, t) => (v == null ? 0 : Math.abs(v) / t);
-  const pos = (v, t) => (v == null || v <= 0 ? 0 : v / t);
-  const neg = (v, t) => (v == null || v >= 0 ? 0 : -v / t);
-
-  const kyphosisScore = Math.max(
-    ratio(fh?.value, WARN.forward_head),
-    ratio(sf?.value, WARN.shoulder_forward),
-  );
-  const lordosisScore = pos(tr?.value, WARN.trunk_lean);
-  const swaybackScore = Math.max(
-    neg(tr?.value, WARN.trunk_lean),
-    kn && kn.value >= 178 ? (kn.value - 178) / WARN.knee_hyper + 1 : 0,
-  );
-  const asymmetryScore = Math.max(
-    ratio(st?.value, WARN.shoulder_tilt),
-    ratio(pt?.value, WARN.pelvic_tilt),
-    ratio(ht?.value, WARN.head_tilt),
-    ratio(ls?.value, WARN.lateral_shift),
-  );
-
-  const reasonFor = {
-    kyphosis: () => {
-      const r = [];
-      if (fh && Math.abs(fh.value) >= WARN.forward_head * 0.5) r.push(`頭部前方位 ${signed(fh.value)}%`);
-      if (sf && Math.abs(sf.value) >= WARN.shoulder_forward * 0.5) r.push(`肩の前方変位 ${signed(sf.value)}%`);
-      return r.length ? r : ["猫背傾向"];
-    },
-    lordosis: () => tr && tr.value > 0 ? [`体幹前傾 ${signed(tr.value)}°`] : ["反り腰傾向"],
-    swayback: () => {
-      const r = [];
-      if (tr && tr.value < 0) r.push(`体幹後傾 ${signed(tr.value)}°`);
-      if (kn && kn.value >= 178) r.push(`膝過伸展 ${kn.value.toFixed(1)}°`);
-      return r.length ? r : ["スウェイバック傾向"];
-    },
-    asymmetry: () => {
-      const r = [];
-      if (st && Math.abs(st.value) >= WARN.shoulder_tilt * 0.5) r.push(`肩の高さに差（${signed(st.value)}°）`);
-      if (pt && Math.abs(pt.value) >= WARN.pelvic_tilt * 0.5) r.push(`骨盤の高さに差（${signed(pt.value)}°）`);
-      if (ht && Math.abs(ht.value) >= WARN.head_tilt * 0.5) r.push(`頭部傾斜（${signed(ht.value)}°）`);
-      if (ls && Math.abs(ls.value) >= WARN.lateral_shift * 0.5) r.push(`上半身の左右シフト（${signed(ls.value)}%）`);
-      return r.length ? r : ["左右差傾向"];
-    },
-  };
-
-  const scores = [
-    { id: "kyphosis", score: kyphosisScore },
-    { id: "lordosis", score: lordosisScore },
-    { id: "swayback", score: swaybackScore },
-    { id: "asymmetry", score: asymmetryScore },
-  ].sort((a, b) => b.score - a.score);
-
-  const top = scores[0];
-  const second = scores[1];
-
-  // 複合タイプ：1位・2位ともに閾値超え (>=1.0) かつスコア比 >=0.85 の場合のみ
-  if (top.score >= 1.0 && second.score >= 1.0 && second.score / top.score >= 0.85) {
-    const reasons = [];
-    if (kyphosisScore >= 1.0) reasons.push("猫背の傾向");
-    if (lordosisScore >= 1.0) reasons.push("反り腰の傾向");
-    if (swaybackScore >= 1.0) reasons.push("スウェイバックの傾向");
-    if (asymmetryScore >= 1.0) reasons.push("左右差あり");
-    return { id: "combined", reasons };
+// 主訴部位 → issues 互換オブジェクト。severity は 1.0（臨床閾値相当）で固定。
+// aggregate は muscle ごとに max severity を取るので、計測値由来の強い所見が
+// 既にあればそちらが残り、無ければ pain area 由来の note でハイライトされる。
+function painAreaIssues(painAreas) {
+  if (!painAreas || !painAreas.length) return [];
+  const out = [];
+  for (const area of painAreas) {
+    const def = PAIN_AREA_MAP[area];
+    if (!def) continue;
+    out.push({ severity: 1.0, weak: def.weak, tight: def.tight });
   }
-
-  // 最大スコアが 0.5 (= 半閾値) 以上なら、そのタイプを採用
-  if (top.score >= 0.5) {
-    return { id: top.id, reasons: reasonFor[top.id]() };
-  }
-
-  // どのスコアも 0.5 未満：フラットバック判定 or 理想
-  const trunkFlat = tr && Math.abs(tr.value) < WARN.trunk_lean * 0.4;
-  const sagittalQuiet = kyphosisScore < 0.5 && lordosisScore < 0.5 && swaybackScore < 0.5;
-  if (trunkFlat && sagittalQuiet) {
-    return { id: "flatback", reasons: ["脊柱のS字カーブが目立たない"] };
-  }
-
-  return { id: "ideal", reasons: ["顕著な逸脱なし"] };
+  return out;
 }
 
-export function deriveRecommendations(metricsByView) {
-  const issues = detectIssues(metricsByView);
+export function painAreaLabels(painAreas) {
+  if (!painAreas || !painAreas.length) return [];
+  return painAreas
+    .map((id) => PAIN_AREA_MAP[id]?.label)
+    .filter(Boolean);
+}
+
+export function deriveRecommendations(metricsByView, painAreas = []) {
+  const issues = [
+    ...detectIssues(metricsByView),
+    ...painAreaIssues(painAreas),
+  ];
   const weakAgg = aggregate(issues, "weak");
   const tightAgg = aggregate(issues, "tight");
 

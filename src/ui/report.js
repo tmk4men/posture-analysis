@@ -8,14 +8,16 @@
 // }
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod, anatomyMod] = await Promise.all([
+const [musclesMod, assetsMod, anatomyMod, recommendMod] = await Promise.all([
   import("../data/muscles.js" + V),
   import("../data/exerciseAssets.js" + V),
   import("./anatomy.js" + V),
+  import("../pose/recommend.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
 const { ASSET_BY_ID } = assetsMod;
 const { renderAnatomyPanel } = anatomyMod;
+const { painAreaLabels } = recommendMod;
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -79,6 +81,15 @@ export function renderReport({ findings, patient, photos }) {
 
   const patientName = patient?.name ? escapeHtml(patient.name) : "—";
   const patientDate = patient?.date ? formatPatientDate(patient.date) : "";
+  const painLabels = painAreaLabels(patient?.painAreas);
+  const painChipsHtml = painLabels.length
+    ? `<div class="report-pain-areas">
+         <span class="report-pain-areas__label">ご申告の不調部位</span>
+         ${painLabels
+           .map((l) => `<span class="report-pain-chip">${escapeHtml(l)}</span>`)
+           .join("")}
+       </div>`
+    : "";
 
   const page1 = `
     <article class="report-page report-page--1">
@@ -108,6 +119,8 @@ export function renderReport({ findings, patient, photos }) {
               .map((p) => `<p>${p}</p>`)
               .join("")}
           </div>
+
+          ${painChipsHtml}
 
           ${renderAnatomyPanel(weakIds, tightIds)}
         </div>

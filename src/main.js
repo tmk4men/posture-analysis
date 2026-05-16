@@ -10,6 +10,7 @@ const [
   overlayMod,
   reportMod,
   geminiMod,
+  recommendMod,
 ] = await Promise.all([
   import("./pose/detector.js" + V),
   import("./pose/angles.js" + V),
@@ -17,6 +18,7 @@ const [
   import("./ui/overlay.js" + V),
   import("./ui/report.js" + V),
   import("./ai/gemini.js" + V),
+  import("./pose/recommend.js" + V),
 ]);
 const { detectPose, warmup } = detectorMod;
 const { computeMetrics, summarizeAll } = anglesMod;
@@ -24,6 +26,7 @@ const { setupUpload, resetUpload } = uploadMod;
 const { drawPoseOnCanvas, renderMetrics } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
 const { generateFindings, getDefaultModel } = geminiMod;
+const { PAIN_AREA_OPTIONS } = recommendMod;
 
 const VIEWS = ["front", "right"];
 const SETTINGS_KEY = "posture_app_settings_v2";
@@ -178,11 +181,18 @@ function captureCanvasPhotos() {
   return out;
 }
 
+function collectPainAreas() {
+  return Array.from(
+    document.querySelectorAll('#pain-areas input[type="checkbox"]:checked')
+  ).map((el) => el.value);
+}
+
 async function onAnalyze() {
   const settings = loadSettings();
   const patient = {
     name: document.getElementById("patient-name").value,
     date: document.getElementById("patient-date").value,
+    painAreas: collectPainAreas(),
   };
   const summary = summarizeAll(state.metricsByView);
 
@@ -219,6 +229,7 @@ function onReset() {
     resetUpload(v);
     state.metricsByView[v] = null;
   }
+  onResetPainAreas();
   document.getElementById("summary-output").innerHTML = "";
   setStatus("");
   refreshAnalyzeButton();
@@ -275,8 +286,28 @@ function setupSettingsDialog() {
   });
 }
 
+function renderPainAreaChips() {
+  const host = document.getElementById("pain-areas");
+  if (!host) return;
+  host.innerHTML = PAIN_AREA_OPTIONS.map(
+    (opt) => `
+      <label class="chip">
+        <input type="checkbox" value="${opt.id}" />
+        <span>${opt.label}</span>
+      </label>
+    `
+  ).join("");
+}
+
+function onResetPainAreas() {
+  document
+    .querySelectorAll('#pain-areas input[type="checkbox"]:checked')
+    .forEach((el) => { el.checked = false; });
+}
+
 function init() {
   document.getElementById("patient-date").valueAsDate = new Date();
+  renderPainAreaChips();
 
   for (const view of VIEWS) {
     setupUpload(view, handleImage);
