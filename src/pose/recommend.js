@@ -4,14 +4,12 @@
 // noticeably different reports.
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod, postureTypesMod] = await Promise.all([
+const [musclesMod, assetsMod] = await Promise.all([
   import("../data/muscles.js" + V),
   import("../data/exerciseAssets.js" + V),
-  import("../data/postureTypes.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
 const { EXERCISE_ASSETS } = assetsMod;
-const { POSTURE_TYPE_BY_ID } = postureTypesMod;
 
 function getMetric(byView, view, key) {
   const arr = byView?.[view];
@@ -24,16 +22,33 @@ function signed(v) {
   return (r >= 0 ? "+" : "") + r.toFixed(1);
 }
 
+// Clinical "warn" thresholds per metric. severity is computed as deviation /
+// threshold (so 1.0 = at the warn line, 2.0 = double).  We pick up issues from
+// half the threshold onward — small deviations still produce a personalised
+// pick, but with a low severity so they sort below stronger findings.
+const WARN = {
+  forward_head: 10,    // % of torso height
+  shoulder_forward: 8, // % of torso height
+  trunk_lean: 5,       // °
+  shoulder_tilt: 2,    // °
+  pelvic_tilt: 2,      // °
+  head_tilt: 3,        // °
+  lateral_shift: 5,    // % of shoulder width
+  knee_hyper: 2,       // ° beyond 178
+  knee_flex: 5,        // ° below 165
+};
+const ENTRY_RATIO = 0.5; // pick up issues from half the clinical threshold
+
 // Each detected issue contributes weak/tight muscle ids with a severity score
-// (2 = moderate, 3 = severe) and a note tied to the actual measured value.
+// (= magnitude / clinical threshold) and a note tied to the actual measured value.
 function detectIssues(byView) {
   const issues = [];
   const sideView = byView?.right ? "right" : byView?.left ? "left" : null;
 
   if (sideView) {
     const fh = getMetric(byView, sideView, "forward_head");
-    if (fh && fh.value >= 10) {
-      const sev = fh.value >= 15 ? 3 : 2;
+    if (fh && Math.abs(fh.value) / WARN.forward_head >= ENTRY_RATIO) {
+      const sev = Math.abs(fh.value) / WARN.forward_head;
       const tag = `頭部前方位 ${signed(fh.value)}%`;
       issues.push({
         severity: sev,
@@ -43,8 +58,8 @@ function detectIssues(byView) {
     }
 
     const sf = getMetric(byView, sideView, "shoulder_forward");
-    if (sf && sf.value >= 8) {
-      const sev = sf.value >= 12 ? 3 : 2;
+    if (sf && Math.abs(sf.value) / WARN.shoulder_forward >= ENTRY_RATIO) {
+      const sev = Math.abs(sf.value) / WARN.shoulder_forward;
       const tag = `肩の前方変位 ${signed(sf.value)}%`;
       issues.push({
         severity: sev,
@@ -54,8 +69,8 @@ function detectIssues(byView) {
     }
 
     const tr = getMetric(byView, sideView, "trunk_lean");
-    if (tr && Math.abs(tr.value) >= 5) {
-      const sev = Math.abs(tr.value) >= 10 ? 3 : 2;
+    if (tr && Math.abs(tr.value) / WARN.trunk_lean >= ENTRY_RATIO) {
+      const sev = Math.abs(tr.value) / WARN.trunk_lean;
       if (tr.value > 0) {
         const tag = `体幹前傾 ${signed(tr.value)}°`;
         issues.push({
@@ -76,14 +91,16 @@ function detectIssues(byView) {
     const kn = getMetric(byView, sideView, "knee_angle");
     if (kn) {
       if (kn.value >= 178) {
+        const sev = (kn.value - 178) / WARN.knee_hyper + 1; // ≥1 once hyperextended
         issues.push({
-          severity: 2,
+          severity: sev,
           weak: [["hamstrings", `膝過伸展 ${kn.value.toFixed(1)}°：膝後面の制動不足`]],
           tight: [],
         });
       } else if (kn.value < 165) {
+        const sev = (165 - kn.value) / WARN.knee_flex + 1;
         issues.push({
-          severity: 2,
+          severity: sev,
           weak: [],
           tight: [["hamstrings", `膝屈曲位 ${kn.value.toFixed(1)}°：もも裏が短縮`]],
         });
@@ -93,8 +110,8 @@ function detectIssues(byView) {
 
   if (byView?.front && byView.front.length) {
     const st = getMetric(byView, "front", "shoulder_tilt");
-    if (st && Math.abs(st.value) >= 2) {
-      const sev = Math.abs(st.value) >= 4 ? 3 : 2;
+    if (st && Math.abs(st.value) / WARN.shoulder_tilt >= ENTRY_RATIO) {
+      const sev = Math.abs(st.value) / WARN.shoulder_tilt;
       const tag = `肩の傾き ${signed(st.value)}°`;
       const highSide = st.value > 0 ? "左" : "右";
       issues.push({
@@ -105,36 +122,39 @@ function detectIssues(byView) {
     }
 
     const pt = getMetric(byView, "front", "pelvic_tilt");
-    if (pt && Math.abs(pt.value) >= 2) {
-      const sev = Math.abs(pt.value) >= 4 ? 3 : 2;
+    if (pt && Math.abs(pt.value) / WARN.pelvic_tilt >= ENTRY_RATIO) {
+      const sev = Math.abs(pt.value) / WARN.pelvic_tilt;
       const tag = `骨盤の傾き ${signed(pt.value)}°`;
+      const highSide = pt.value > 0 ? "左" : "右";
       issues.push({
         severity: sev,
-        weak: [["glutes", `${tag}：骨盤の左右支持力が低下`]],
-        tight: [["erector_spinae", `${tag}：腰背部で代償`]],
+        weak: [["glutes", `${tag}：${highSide}側骨盤の支持力が低下`]],
+        tight: [["erector_spinae", `${tag}：${highSide}側腰背部で代償`]],
       });
     }
 
     const ht = getMetric(byView, "front", "head_tilt");
-    if (ht && Math.abs(ht.value) >= 3) {
-      const sev = Math.abs(ht.value) >= 5 ? 3 : 2;
+    if (ht && Math.abs(ht.value) / WARN.head_tilt >= ENTRY_RATIO) {
+      const sev = Math.abs(ht.value) / WARN.head_tilt;
       const tag = `頭部傾斜 ${signed(ht.value)}°`;
+      const tiltSide = ht.value > 0 ? "右" : "左";
       issues.push({
         severity: sev,
         weak: [],
-        tight: [["upper_traps", `${tag}：頸部一側の緊張`]],
+        tight: [["upper_traps", `${tag}：${tiltSide}側頸部の緊張`]],
       });
     }
 
     const ls = getMetric(byView, "front", "lateral_shift");
-    if (ls && Math.abs(ls.value) >= 5) {
-      const sev = Math.abs(ls.value) >= 10 ? 3 : 2;
+    if (ls && Math.abs(ls.value) / WARN.lateral_shift >= ENTRY_RATIO) {
+      const sev = Math.abs(ls.value) / WARN.lateral_shift;
       const tag = `上半身シフト ${signed(ls.value)}%`;
+      const shiftSide = ls.value > 0 ? "右" : "左";
       issues.push({
         severity: sev,
         weak: [
-          ["abdominals", `${tag}：体幹の中心保持力が不足`],
-          ["glutes", `${tag}：骨盤の安定性が不足`],
+          ["abdominals", `${tag}：体幹の中心保持力が不足（${shiftSide}寄り）`],
+          ["glutes", `${tag}：骨盤の安定性が不足（${shiftSide}寄り）`],
         ],
         tight: [],
       });
@@ -142,6 +162,69 @@ function detectIssues(byView) {
   }
 
   return issues;
+}
+
+// 全 issue 候補を取り損ねた時の救済：すべての計測値の中で最も逸脱しているものを
+// 1件だけ「軽度の傾向」として返す。これで全員同じ固定フォールバックを返すのを防ぐ。
+function pickTopMetric(byView) {
+  const candidates = [];
+  const sideView = byView?.right ? "right" : byView?.left ? "left" : null;
+  if (sideView) {
+    const fh = getMetric(byView, sideView, "forward_head");
+    if (fh) candidates.push({
+      ratio: Math.abs(fh.value) / WARN.forward_head,
+      build: () => ({
+        severity: Math.abs(fh.value) / WARN.forward_head,
+        weak: [["deep_neck_flexors", `頭部前方位 ${signed(fh.value)}%（軽度）：頸部前面を意識`]],
+        tight: [["upper_traps", `頭部前方位 ${signed(fh.value)}%（軽度）：頸部後面の張りに注意`]],
+      }),
+    });
+    const sf = getMetric(byView, sideView, "shoulder_forward");
+    if (sf) candidates.push({
+      ratio: Math.abs(sf.value) / WARN.shoulder_forward,
+      build: () => ({
+        severity: Math.abs(sf.value) / WARN.shoulder_forward,
+        weak: [["scapular_stabilizers", `肩の前方変位 ${signed(sf.value)}%（軽度）：肩甲骨周囲の活性化を`]],
+        tight: [["pectorals", `肩の前方変位 ${signed(sf.value)}%（軽度）：胸前面の張りに注意`]],
+      }),
+    });
+    const tr = getMetric(byView, sideView, "trunk_lean");
+    if (tr) candidates.push({
+      ratio: Math.abs(tr.value) / WARN.trunk_lean,
+      build: () => tr.value > 0 ? ({
+        severity: Math.abs(tr.value) / WARN.trunk_lean,
+        weak: [["abdominals", `体幹前傾 ${signed(tr.value)}°（軽度）：体幹前面の活性化`]],
+        tight: [["erector_spinae", `体幹前傾 ${signed(tr.value)}°（軽度）：腰背部の張りに注意`]],
+      }) : ({
+        severity: Math.abs(tr.value) / WARN.trunk_lean,
+        weak: [["erector_spinae", `体幹後傾 ${signed(tr.value)}°（軽度）：背筋の活性化`]],
+        tight: [["hamstrings", `体幹後傾 ${signed(tr.value)}°（軽度）：もも裏の張りに注意`]],
+      }),
+    });
+  }
+  if (byView?.front && byView.front.length) {
+    const st = getMetric(byView, "front", "shoulder_tilt");
+    if (st) candidates.push({
+      ratio: Math.abs(st.value) / WARN.shoulder_tilt,
+      build: () => ({
+        severity: Math.abs(st.value) / WARN.shoulder_tilt,
+        weak: [["scapular_stabilizers", `肩の傾き ${signed(st.value)}°（軽度）：肩甲骨周囲の左右差`]],
+        tight: [["upper_traps", `肩の傾き ${signed(st.value)}°（軽度）：${st.value > 0 ? "左" : "右"}側上部僧帽筋`]],
+      }),
+    });
+    const pt = getMetric(byView, "front", "pelvic_tilt");
+    if (pt) candidates.push({
+      ratio: Math.abs(pt.value) / WARN.pelvic_tilt,
+      build: () => ({
+        severity: Math.abs(pt.value) / WARN.pelvic_tilt,
+        weak: [["glutes", `骨盤の傾き ${signed(pt.value)}°（軽度）：${pt.value > 0 ? "左" : "右"}側骨盤の支持`]],
+        tight: [],
+      }),
+    });
+  }
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.ratio - a.ratio);
+  return candidates[0].build();
 }
 
 // Reduce per-issue contributions to a single highest-severity entry per muscle.
@@ -188,10 +271,38 @@ function pickOne(arr, rng) {
   return arr[Math.floor(rng() * arr.length)];
 }
 
-// Build a 4-item training plan: prefer strength assets for weak muscles, then
-// stretch assets for tight muscles, then top up with more strength from the
-// remaining weak-muscle candidates.
-function buildTrainingPlan(weakIds, tightIds, rng) {
+// 1筋肉に対する候補アセットの「焦点度」スコア。
+// 単一筋肉ターゲット (=specificityがhigh) を優先することで、
+// 「abdominal」のようなマルチターゲット汎用アセットが先に選ばれ続けるのを防ぐ。
+function assetSpecificity(asset, targetMuscleId, kind) {
+  const list = kind === "strength" ? asset.strengthens : asset.stretches;
+  // 該当筋肉が含まれていなければ無効
+  if (!list.includes(targetMuscleId)) return 0;
+  // ターゲット筋以外も含む数 → 少ないほど focused
+  return 1 / list.length;
+}
+
+function pickFocused(candidates, targetId, kind, rng, allAssets) {
+  // specificity でソート、同点は seed で
+  const scored = candidates.map((id) => {
+    const asset = allAssets.find((a) => a.id === id);
+    return { id, score: asset ? assetSpecificity(asset, targetId, kind) : 0 };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  // 最高点のグループだけ取り出し、その中から rng で1つ
+  const topScore = scored[0]?.score ?? 0;
+  const topTier = scored.filter((s) => s.score === topScore);
+  return pickOne(topTier.map((s) => s.id), rng);
+}
+
+// Build a training plan (target 4 cards, min 1). Steps:
+//   1) For each WEAK muscle in severity order, pick the most focused strength asset.
+//   2) For each TIGHT muscle in severity order, pick the most focused stretch asset.
+//   3) Top up by re-iterating the higher-severity muscles for more variety on
+//      whichever side (weak vs tight) has the strongest unfilled finding.
+// No hardcoded generic fallback — if no clinical candidates remain we show fewer
+// cards rather than padding with unrelated exercises.
+function buildTrainingPlan(weakList, tightList, rng) {
   const strengthByMuscle = new Map();
   const stretchByMuscle = new Map();
   for (const asset of EXERCISE_ASSETS) {
@@ -208,43 +319,57 @@ function buildTrainingPlan(weakIds, tightIds, rng) {
   const used = new Set();
   const plan = [];
 
+  const weakIds = weakList.map((m) => m.id);
+  const tightIds = tightList.map((m) => m.id);
+  const sevOf = new Map([
+    ...weakList.map((m) => [`w:${m.id}`, m.severity ?? 0]),
+    ...tightList.map((m) => [`t:${m.id}`, m.severity ?? 0]),
+  ]);
+
+  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap at 3 cards
   for (const muscleId of weakIds) {
     if (plan.length >= 3) break;
     const candidates = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
-    const pick = pickOne(candidates, rng);
+    const pick = pickFocused(candidates, muscleId, "strength", rng, EXERCISE_ASSETS);
     used.add(pick);
     plan.push({ assetId: pick });
   }
 
+  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at 4 cards
   for (const muscleId of tightIds) {
     if (plan.length >= 4) break;
     const candidates = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
-    const pick = pickOne(candidates, rng);
+    const pick = pickFocused(candidates, muscleId, "stretch", rng, EXERCISE_ASSETS);
     used.add(pick);
     plan.push({ assetId: pick });
   }
 
-  // Top up with extra strength picks (still tied to a weak muscle when possible).
+  // Phase 3: top-up. Each round, pick from the SEVERITY-HIGHEST muscle that
+  // still has unused candidates — alternating between weak and tight by which
+  // unfilled finding is more pressing for THIS patient.
   while (plan.length < 4) {
-    let added = false;
+    const options = [];
     for (const muscleId of weakIds) {
-      const candidates = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
-      if (candidates.length) {
-        const pick = pickOne(candidates, rng);
-        used.add(pick);
-        plan.push({ assetId: pick });
-        added = true;
-        break;
-      }
+      const cands = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
+      if (cands.length) options.push({
+        muscleId, kind: "strength", cands,
+        severity: sevOf.get(`w:${muscleId}`) ?? 0,
+      });
     }
-    if (added) continue;
-    const FALLBACK = ["abdominal", "seated_row", "hip_thrust", "seated_chest_press"];
-    const fb = FALLBACK.find((id) => !used.has(id));
-    if (!fb) break;
-    used.add(fb);
-    plan.push({ assetId: fb });
+    for (const muscleId of tightIds) {
+      const cands = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
+      if (cands.length) options.push({
+        muscleId, kind: "stretch", cands,
+        severity: sevOf.get(`t:${muscleId}`) ?? 0,
+      });
+    }
+    if (!options.length) break;
+    options.sort((a, b) => b.severity - a.severity);
+    const pick = pickFocused(options[0].cands, options[0].muscleId, options[0].kind, rng, EXERCISE_ASSETS);
+    used.add(pick);
+    plan.push({ assetId: pick });
   }
 
   return plan.slice(0, 4);
@@ -266,6 +391,8 @@ export function summarizeIssues(metricsByView) {
 
 // 計測値から姿勢7分類を判定する（IMG_0416 / IMG_0417 参照）。
 // 完全な医学的鑑別ではなく、整骨院向けの傾向把握用ラベル。
+// 各タイプにスコア（= 関連計測値の最大ratio）を出し、最大スコアのタイプを採用。
+// 2位以上のスコアが拮抗（>=0.85x）して両方とも閾値超え（>=1.0）の場合だけ複合。
 export function classifyPostureType(metricsByView) {
   const sideView = metricsByView?.right ? "right" : metricsByView?.left ? "left" : null;
   const fh = sideView ? getMetric(metricsByView, sideView, "forward_head") : null;
@@ -278,78 +405,80 @@ export function classifyPostureType(metricsByView) {
   const ht = getMetric(metricsByView, "front", "head_tilt");
   const ls = getMetric(metricsByView, "front", "lateral_shift");
 
-  const reasons = [];
+  const ratio = (v, t) => (v == null ? 0 : Math.abs(v) / t);
+  const pos = (v, t) => (v == null || v <= 0 ? 0 : v / t);
+  const neg = (v, t) => (v == null || v >= 0 ? 0 : -v / t);
 
-  // 左右差判定（前面ビューが必要）
-  const asymmetry =
-    (st && Math.abs(st.value) >= 2) ||
-    (pt && Math.abs(pt.value) >= 2) ||
-    (ht && Math.abs(ht.value) >= 3) ||
-    (ls && Math.abs(ls.value) >= 5);
+  const kyphosisScore = Math.max(
+    ratio(fh?.value, WARN.forward_head),
+    ratio(sf?.value, WARN.shoulder_forward),
+  );
+  const lordosisScore = pos(tr?.value, WARN.trunk_lean);
+  const swaybackScore = Math.max(
+    neg(tr?.value, WARN.trunk_lean),
+    kn && kn.value >= 178 ? (kn.value - 178) / WARN.knee_hyper + 1 : 0,
+  );
+  const asymmetryScore = Math.max(
+    ratio(st?.value, WARN.shoulder_tilt),
+    ratio(pt?.value, WARN.pelvic_tilt),
+    ratio(ht?.value, WARN.head_tilt),
+    ratio(ls?.value, WARN.lateral_shift),
+  );
 
-  // 矢状面（横向き）所見
-  const fhpHigh = fh && fh.value >= 10;
-  const shoulderForwardHigh = sf && sf.value >= 8;
-  const trunkForward = tr && tr.value >= 5; // 体幹前傾 → 反り腰寄りの代償
-  const trunkBack = tr && tr.value <= -3; // 体幹後傾 → スウェイバック寄り
-  const trunkFlat = tr && Math.abs(tr.value) < 2 && !fhpHigh && !shoulderForwardHigh;
-  const kneeHyper = kn && kn.value >= 178;
+  const reasonFor = {
+    kyphosis: () => {
+      const r = [];
+      if (fh && Math.abs(fh.value) >= WARN.forward_head * 0.5) r.push(`頭部前方位 ${signed(fh.value)}%`);
+      if (sf && Math.abs(sf.value) >= WARN.shoulder_forward * 0.5) r.push(`肩の前方変位 ${signed(sf.value)}%`);
+      return r.length ? r : ["猫背傾向"];
+    },
+    lordosis: () => tr && tr.value > 0 ? [`体幹前傾 ${signed(tr.value)}°`] : ["反り腰傾向"],
+    swayback: () => {
+      const r = [];
+      if (tr && tr.value < 0) r.push(`体幹後傾 ${signed(tr.value)}°`);
+      if (kn && kn.value >= 178) r.push(`膝過伸展 ${kn.value.toFixed(1)}°`);
+      return r.length ? r : ["スウェイバック傾向"];
+    },
+    asymmetry: () => {
+      const r = [];
+      if (st && Math.abs(st.value) >= WARN.shoulder_tilt * 0.5) r.push(`肩の高さに差（${signed(st.value)}°）`);
+      if (pt && Math.abs(pt.value) >= WARN.pelvic_tilt * 0.5) r.push(`骨盤の高さに差（${signed(pt.value)}°）`);
+      if (ht && Math.abs(ht.value) >= WARN.head_tilt * 0.5) r.push(`頭部傾斜（${signed(ht.value)}°）`);
+      if (ls && Math.abs(ls.value) >= WARN.lateral_shift * 0.5) r.push(`上半身の左右シフト（${signed(ls.value)}%）`);
+      return r.length ? r : ["左右差傾向"];
+    },
+  };
 
-  const sagittalFlags = [];
-  if (fhpHigh) sagittalFlags.push("kyphosis_signal");
-  if (shoulderForwardHigh) sagittalFlags.push("kyphosis_signal");
-  if (trunkForward) sagittalFlags.push("lordosis_signal");
-  if (trunkBack || kneeHyper) sagittalFlags.push("swayback_signal");
-  if (trunkFlat) sagittalFlags.push("flatback_signal");
+  const scores = [
+    { id: "kyphosis", score: kyphosisScore },
+    { id: "lordosis", score: lordosisScore },
+    { id: "swayback", score: swaybackScore },
+    { id: "asymmetry", score: asymmetryScore },
+  ].sort((a, b) => b.score - a.score);
 
-  const distinctSignals = new Set(sagittalFlags);
+  const top = scores[0];
+  const second = scores[1];
 
-  // 複合タイプ：矢状面の異なる signal が2系統以上、または矢状面異常＋左右差
-  if (
-    distinctSignals.size >= 2 ||
-    (asymmetry && distinctSignals.size >= 1)
-  ) {
-    if (fhpHigh || shoulderForwardHigh) reasons.push("猫背の傾向");
-    if (trunkForward) reasons.push("反り腰の傾向");
-    if (trunkBack || kneeHyper) reasons.push("スウェイバックの傾向");
-    if (trunkFlat) reasons.push("フラットバックの傾向");
-    if (asymmetry) reasons.push("左右差あり");
+  // 複合タイプ：1位・2位ともに閾値超え (>=1.0) かつスコア比 >=0.85 の場合のみ
+  if (top.score >= 1.0 && second.score >= 1.0 && second.score / top.score >= 0.85) {
+    const reasons = [];
+    if (kyphosisScore >= 1.0) reasons.push("猫背の傾向");
+    if (lordosisScore >= 1.0) reasons.push("反り腰の傾向");
+    if (swaybackScore >= 1.0) reasons.push("スウェイバックの傾向");
+    if (asymmetryScore >= 1.0) reasons.push("左右差あり");
     return { id: "combined", reasons };
   }
 
-  if (asymmetry) {
-    if (st && Math.abs(st.value) >= 2) reasons.push(`肩の高さに差（${signed(st.value)}°）`);
-    if (pt && Math.abs(pt.value) >= 2) reasons.push(`骨盤の高さに差（${signed(pt.value)}°）`);
-    if (ht && Math.abs(ht.value) >= 3) reasons.push(`頭部傾斜（${signed(ht.value)}°）`);
-    if (ls && Math.abs(ls.value) >= 5) reasons.push(`上半身の左右シフト（${signed(ls.value)}%）`);
-    return { id: "asymmetry", reasons };
+  // 最大スコアが 0.5 (= 半閾値) 以上なら、そのタイプを採用
+  if (top.score >= 0.5) {
+    return { id: top.id, reasons: reasonFor[top.id]() };
   }
 
-  if (fhpHigh && shoulderForwardHigh) {
-    reasons.push(`頭部前方位 ${signed(fh.value)}%`);
-    reasons.push(`肩の前方変位 ${signed(sf.value)}%`);
-    return { id: "kyphosis", reasons };
-  }
-
-  if (trunkBack || kneeHyper) {
-    if (trunkBack) reasons.push(`体幹後傾 ${signed(tr.value)}°`);
-    if (kneeHyper) reasons.push(`膝過伸展 ${kn.value.toFixed(1)}°`);
-    return { id: "swayback", reasons };
-  }
-
-  if (trunkForward) {
-    reasons.push(`体幹前傾 ${signed(tr.value)}°`);
-    return { id: "lordosis", reasons };
-  }
-
-  if (fhpHigh) {
-    reasons.push(`頭部前方位 ${signed(fh.value)}%`);
-    return { id: "kyphosis", reasons };
-  }
-
-  if (trunkFlat) {
-    reasons.push("脊柱のS字カーブが目立たない");
-    return { id: "flatback", reasons };
+  // どのスコアも 0.5 未満：フラットバック判定 or 理想
+  const trunkFlat = tr && Math.abs(tr.value) < WARN.trunk_lean * 0.4;
+  const sagittalQuiet = kyphosisScore < 0.5 && lordosisScore < 0.5 && swaybackScore < 0.5;
+  if (trunkFlat && sagittalQuiet) {
+    return { id: "flatback", reasons: ["脊柱のS字カーブが目立たない"] };
   }
 
   return { id: "ideal", reasons: ["顕著な逸脱なし"] };
@@ -360,42 +489,39 @@ export function deriveRecommendations(metricsByView) {
   const weakAgg = aggregate(issues, "weak");
   const tightAgg = aggregate(issues, "tight");
 
-  // Fallback when nothing exceeds thresholds: typical modern-posture profile.
+  // 何も拾えなかった場合：最も deviation の大きい1指標を「弱い傾向」として採用。
+  // 全員同じ固定セットを返さないために、その人の最大逸脱を起点に組む。
   if (weakAgg.size === 0 && tightAgg.size === 0) {
-    weakAgg.set("deep_neck_flexors", { severity: 1, note: "典型的な現代姿勢パターン" });
-    weakAgg.set("scapular_stabilizers", { severity: 1, note: "典型的な現代姿勢パターン" });
-    weakAgg.set("glutes", { severity: 1, note: "典型的な現代姿勢パターン" });
-    tightAgg.set("upper_traps", { severity: 1, note: "典型的な現代姿勢パターン" });
-    tightAgg.set("pectorals", { severity: 1, note: "典型的な現代姿勢パターン" });
+    const top = pickTopMetric(metricsByView);
+    if (top) {
+      for (const [id, note] of top.weak) weakAgg.set(id, { severity: top.severity, note });
+      for (const [id, note] of top.tight) tightAgg.set(id, { severity: top.severity, note });
+    } else {
+      // 計測値も無い場合のみ最終フォールバック（理想姿勢扱い）
+      weakAgg.set("deep_neck_flexors", { severity: 0.1, note: "全体的に大きな逸脱は見られませんでした" });
+      tightAgg.set("upper_traps", { severity: 0.1, note: "全体的に大きな逸脱は見られませんでした" });
+    }
   }
 
+  // 上位3筋肉に絞る（人体図のハイライトを散らし過ぎず、患者ごとの差を出すため）
   const toList = (m) =>
     [...m.entries()]
       .sort((a, b) => b[1].severity - a[1].severity)
-      .slice(0, 5)
-      .map(([id, v]) => ({ id, note: v.note }));
+      .slice(0, 3)
+      .map(([id, v]) => ({ id, note: v.note, severity: v.severity }));
 
   const weakMuscles = toList(weakAgg);
   const tightMuscles = toList(tightAgg);
 
   const rng = makeRng(metricSeed(metricsByView));
-  const trainingPlan = buildTrainingPlan(
-    weakMuscles.map((m) => m.id),
-    tightMuscles.map((m) => m.id),
-    rng,
-  );
+  const trainingPlan = buildTrainingPlan(weakMuscles, tightMuscles, rng);
 
-  const typeResult = classifyPostureType(metricsByView);
-  const typeDef = POSTURE_TYPE_BY_ID[typeResult.id] || POSTURE_TYPE_BY_ID.ideal;
-  const postureType = {
-    id: typeResult.id,
-    no: typeDef.no,
-    label: typeDef.label,
-    short: typeDef.short,
-    description: typeDef.description,
-    landmarks: typeDef.landmarks,
-    reasons: typeResult.reasons,
+  // 表示用に severity を落とす（report.js は {id, note} だけ参照）
+  const stripSeverity = (m) => ({ id: m.id, note: m.note });
+
+  return {
+    weakMuscles: weakMuscles.map(stripSeverity),
+    tightMuscles: tightMuscles.map(stripSeverity),
+    trainingPlan,
   };
-
-  return { weakMuscles, tightMuscles, trainingPlan, postureType };
 }

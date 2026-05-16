@@ -80,20 +80,6 @@ export function renderReport({ findings, patient, photos }) {
   const patientName = patient?.name ? escapeHtml(patient.name) : "—";
   const patientDate = patient?.date ? formatPatientDate(patient.date) : "";
 
-  const type = findings.postureType;
-  const typeBadge = type
-    ? `<div class="posture-type posture-type--${escapeHtml(type.id)}">
-         <span class="posture-type__no">${escapeHtml(String(type.no))}</span>
-         <div class="posture-type__body">
-           <div class="posture-type__label">姿勢タイプ：${escapeHtml(type.label)}</div>
-           <div class="posture-type__desc">${escapeHtml(type.description || "")}</div>
-           ${type.reasons && type.reasons.length
-             ? `<div class="posture-type__reasons">所見：${escapeHtml(type.reasons.join(" / "))}</div>`
-             : ""}
-         </div>
-       </div>`
-    : "";
-
   const page1 = `
     <article class="report-page report-page--1">
       <header class="report-head">
@@ -103,7 +89,6 @@ export function renderReport({ findings, patient, photos }) {
           <span>患者氏名：<b>${patientName}</b></span>
           ${patientDate ? `<span>撮影日：<b>${patientDate}</b></span>` : ""}
         </div>
-        ${typeBadge}
       </header>
 
       <section class="report-page1-body">
