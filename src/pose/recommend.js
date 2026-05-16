@@ -41,6 +41,8 @@ const ENTRY_RATIO = 0.5; // pick up issues from half the clinical threshold
 
 // Each detected issue contributes weak/tight muscle ids with a severity score
 // (= magnitude / clinical threshold) and a note tied to the actual measured value.
+// Mappings expanded with the broader muscle catalogue so different patients
+// surface different muscles even when the headline finding is similar.
 function detectIssues(byView) {
   const issues = [];
   const sideView = byView?.right ? "right" : byView?.left ? "left" : null;
@@ -63,8 +65,15 @@ function detectIssues(byView) {
       const tag = `肩の前方変位 ${signed(sf.value)}%`;
       issues.push({
         severity: sev,
-        weak: [["scapular_stabilizers", `${tag}：肩甲骨の安定性が低下`]],
-        tight: [["pectorals", `${tag}：巻き肩の主因`]],
+        weak: [
+          ["scapular_stabilizers", `${tag}：肩甲骨の安定性が低下`],
+          ["posterior_deltoid", `${tag}：肩後方の引き戻し力が不足`],
+        ],
+        tight: [
+          ["pectorals", `${tag}：巻き肩の主因`],
+          ["anterior_deltoid", `${tag}：肩前面が固定化`],
+          ["lats", `${tag}：肩を内旋させる方向に作用`],
+        ],
       });
     }
 
@@ -75,15 +84,27 @@ function detectIssues(byView) {
         const tag = `体幹前傾 ${signed(tr.value)}°`;
         issues.push({
           severity: sev,
-          weak: [["abdominals", `${tag}：体幹前面の支持不足`]],
-          tight: [["erector_spinae", `${tag}：腰背部が代償`]],
+          weak: [
+            ["abdominals", `${tag}：体幹前面の支持不足`],
+            ["glutes", `${tag}：股関節伸展の力が不足`],
+          ],
+          tight: [
+            ["iliopsoas", `${tag}：股関節屈筋が骨盤を前傾`],
+            ["erector_spinae", `${tag}：腰背部で代償`],
+          ],
         });
       } else {
         const tag = `体幹後傾 ${signed(tr.value)}°`;
         issues.push({
           severity: sev,
-          weak: [["erector_spinae", `${tag}：背筋の伸展力が低下`]],
-          tight: [["hamstrings", `${tag}：骨盤後傾を助長`]],
+          weak: [
+            ["erector_spinae", `${tag}：背筋の伸展力が低下`],
+            ["iliopsoas", `${tag}：股関節前面の支持が不足`],
+          ],
+          tight: [
+            ["hamstrings", `${tag}：骨盤後傾を助長`],
+            ["calves", `${tag}：足首制限が後傾を強化`],
+          ],
         });
       }
     }
@@ -94,15 +115,25 @@ function detectIssues(byView) {
         const sev = (kn.value - 178) / WARN.knee_hyper + 1; // ≥1 once hyperextended
         issues.push({
           severity: sev,
-          weak: [["hamstrings", `膝過伸展 ${kn.value.toFixed(1)}°：膝後面の制動不足`]],
-          tight: [],
+          weak: [
+            ["hamstrings", `膝過伸展 ${kn.value.toFixed(1)}°：膝後面の制動不足`],
+            ["quadriceps", `膝過伸展 ${kn.value.toFixed(1)}°：膝伸展位での偏荷重`],
+          ],
+          tight: [
+            ["calves", `膝過伸展 ${kn.value.toFixed(1)}°：下腿後面の短縮`],
+          ],
         });
       } else if (kn.value < 165) {
         const sev = (165 - kn.value) / WARN.knee_flex + 1;
         issues.push({
           severity: sev,
-          weak: [],
-          tight: [["hamstrings", `膝屈曲位 ${kn.value.toFixed(1)}°：もも裏が短縮`]],
+          weak: [
+            ["quadriceps", `膝屈曲位 ${kn.value.toFixed(1)}°：膝伸展力が低下`],
+          ],
+          tight: [
+            ["hamstrings", `膝屈曲位 ${kn.value.toFixed(1)}°：もも裏が短縮`],
+            ["calves", `膝屈曲位 ${kn.value.toFixed(1)}°：下腿後面が短縮`],
+          ],
         });
       }
     }
@@ -116,8 +147,13 @@ function detectIssues(byView) {
       const highSide = st.value > 0 ? "左" : "右";
       issues.push({
         severity: sev,
-        weak: [["scapular_stabilizers", `${tag}：肩甲骨周囲の左右差`]],
-        tight: [["upper_traps", `${tag}：${highSide}側の上部僧帽筋に過負荷`]],
+        weak: [
+          ["scapular_stabilizers", `${tag}：肩甲骨周囲の左右差`],
+          ["lats", `${tag}：${highSide}と対側で広背筋の左右差`],
+        ],
+        tight: [
+          ["upper_traps", `${tag}：${highSide}側の上部僧帽筋に過負荷`],
+        ],
       });
     }
 
@@ -128,8 +164,14 @@ function detectIssues(byView) {
       const highSide = pt.value > 0 ? "左" : "右";
       issues.push({
         severity: sev,
-        weak: [["glutes", `${tag}：${highSide}側骨盤の支持力が低下`]],
-        tight: [["erector_spinae", `${tag}：${highSide}側腰背部で代償`]],
+        weak: [
+          ["gluteus_medius", `${tag}：${highSide}側中臀筋の支持力が低下`],
+          ["obliques", `${tag}：体幹側面の安定性が不足`],
+        ],
+        tight: [
+          ["erector_spinae", `${tag}：${highSide}側腰背部で代償`],
+          ["adductors", `${tag}：${highSide}と対側の内転筋が緊張`],
+        ],
       });
     }
 
@@ -153,10 +195,13 @@ function detectIssues(byView) {
       issues.push({
         severity: sev,
         weak: [
-          ["abdominals", `${tag}：体幹の中心保持力が不足（${shiftSide}寄り）`],
-          ["glutes", `${tag}：骨盤の安定性が不足（${shiftSide}寄り）`],
+          ["obliques", `${tag}：体幹側面の中心保持力が不足（${shiftSide}寄り）`],
+          ["gluteus_medius", `${tag}：骨盤の側方安定性が不足（${shiftSide}寄り）`],
+          ["abdominals", `${tag}：体幹前面の支持が不足`],
         ],
-        tight: [],
+        tight: [
+          ["adductors", `${tag}：${shiftSide}側内転筋が短縮`],
+        ],
       });
     }
   }

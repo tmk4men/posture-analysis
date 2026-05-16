@@ -16,6 +16,8 @@ Thumbs.db
 画像/
 参考画像/
 素材画像/
+svg候補プレビュー/
+.debug-anatomy/
 
 # Node (if added later)
 node_modules/
