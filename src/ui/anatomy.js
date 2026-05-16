@@ -27,99 +27,99 @@ const BACK_H = 1192;
 // outside the body silhouette and stay legible. anchorX/anchorY = the point
 // the leader line ends at on the muscle; labelX/labelY = where the text sits.
 const FRONT_LABEL_ANCHORS = {
-  deep_neck_flexors:    { anchorX: 220, anchorY: 255, labelX: 372, labelY: 255, align: "start" },
-  pectorals:            { anchorX: 220, anchorY: 380, labelX: 372, labelY: 360, align: "start" },
-  abdominals:           { anchorX: 220, anchorY: 580, labelX: 372, labelY: 580, align: "start" },
+  deep_neck_flexors:    { anchorX: 220, anchorY: 210, labelX: 372, labelY: 210, align: "start" },
+  pectorals:            { anchorX: 220, anchorY: 320, labelX: 372, labelY: 300, align: "start" },
+  abdominals:           { anchorX: 220, anchorY: 500, labelX: 372, labelY: 500, align: "start" },
 };
 
 const BACK_LABEL_ANCHORS = {
-  upper_traps:           { anchorX: 222, anchorY: 290, labelX: 374, labelY: 270, align: "start" },
-  scapular_stabilizers:  { anchorX: 295, anchorY: 410, labelX: 374, labelY: 420, align: "start" },
-  erector_spinae:        { anchorX: 222, anchorY: 570, labelX: 70,  labelY: 560, align: "end"   },
-  glutes:                { anchorX: 222, anchorY: 760, labelX: 374, labelY: 760, align: "start" },
-  hamstrings:            { anchorX: 222, anchorY: 920, labelX: 70,  labelY: 920, align: "end"   },
+  upper_traps:           { anchorX: 222, anchorY: 240, labelX: 374, labelY: 220, align: "start" },
+  scapular_stabilizers:  { anchorX: 295, anchorY: 350, labelX: 374, labelY: 360, align: "start" },
+  erector_spinae:        { anchorX: 222, anchorY: 490, labelX: 70,  labelY: 480, align: "end"   },
+  glutes:                { anchorX: 222, anchorY: 645, labelX: 374, labelY: 645, align: "start" },
+  hamstrings:            { anchorX: 222, anchorY: 810, labelX: 70,  labelY: 810, align: "end"   },
 };
 
 // Muscle overlay paths — positioned over anatomical regions on each image.
 const FRONT_MUSCLES = `
 <g class="muscle-overlay" fill="transparent" stroke="none">
   <path id="m-deep_neck_flexors"
-        d="M 198 230
-           Q 220 224 242 230
-           L 242 280
-           L 198 280 Z"/>
+        d="M 198 185
+           Q 220 179 242 185
+           L 242 235
+           L 198 235 Z"/>
   <path id="m-pectorals"
-        d="M 132 310
-           C 120 372, 148 428, 200 436
-           L 240 436
-           C 292 428, 320 372, 308 310
-           C 290 302, 258 304, 230 316
-           L 220 320
-           L 210 316
-           C 182 304, 150 302, 132 310 Z"/>
+        d="M 132 255
+           C 120 317, 148 373, 200 381
+           L 240 381
+           C 292 373, 320 317, 308 255
+           C 290 247, 258 249, 230 261
+           L 220 265
+           L 210 261
+           C 182 249, 150 247, 132 255 Z"/>
   <path id="m-abdominals"
-        d="M 190 460
-           C 186 520, 188 600, 198 670
-           C 202 686, 210 695, 218 696
-           L 222 696
-           C 230 695, 238 686, 242 670
-           C 252 600, 254 520, 250 460
-           C 238 466, 220 468, 220 468
-           C 220 468, 202 466, 190 460 Z"/>
+        d="M 190 380
+           C 186 440, 188 520, 198 590
+           C 202 606, 210 615, 218 616
+           L 222 616
+           C 230 615, 238 606, 242 590
+           C 252 520, 254 440, 250 380
+           C 238 386, 220 388, 220 388
+           C 220 388, 202 386, 190 380 Z"/>
 </g>
 `;
 
 const BACK_MUSCLES = `
 <g class="muscle-overlay" fill="transparent" stroke="none">
   <path id="m-upper_traps"
-        d="M 222 230
-           C 278 246, 304 290, 308 338
-           L 138 338
-           C 142 290, 168 246, 222 230 Z"/>
+        d="M 222 185
+           C 278 201, 304 245, 308 293
+           L 138 293
+           C 142 245, 168 201, 222 185 Z"/>
   <path id="m-scapular_stabilizers"
-        d="M 150 350
-           C 142 408, 162 466, 188 478
-           L 215 478
-           L 215 356
-           C 200 352, 180 350, 162 350
-           C 158 350, 154 350, 150 350 Z
-           M 294 350
-           C 302 408, 282 466, 256 478
-           L 229 478
-           L 229 356
-           C 244 352, 264 350, 282 350
-           C 286 350, 290 350, 294 350 Z"/>
+        d="M 150 290
+           C 142 348, 162 406, 188 418
+           L 215 418
+           L 215 296
+           C 200 292, 180 290, 162 290
+           C 158 290, 154 290, 150 290 Z
+           M 294 290
+           C 302 348, 282 406, 256 418
+           L 229 418
+           L 229 296
+           C 244 292, 264 290, 282 290
+           C 286 290, 290 290, 294 290 Z"/>
   <path id="m-erector_spinae"
-        d="M 196 460
-           C 192 540, 194 620, 200 678
-           L 218 678
-           L 218 460 Z
-           M 248 460
-           C 252 540, 250 620, 244 678
-           L 226 678
-           L 226 460 Z"/>
+        d="M 196 380
+           C 192 450, 194 510, 200 568
+           L 218 568
+           L 218 380 Z
+           M 248 380
+           C 252 450, 250 510, 244 568
+           L 226 568
+           L 226 380 Z"/>
   <path id="m-glutes"
-        d="M 132 692
-           C 124 778, 168 822, 206 822
-           C 218 822, 220 808, 220 786
-           L 220 726
-           C 192 692, 154 692, 132 692 Z
-           M 312 692
-           C 320 778, 276 822, 238 822
-           C 226 822, 224 808, 224 786
-           L 224 726
-           C 252 692, 290 692, 312 692 Z"/>
+        d="M 132 582
+           C 124 668, 168 712, 206 712
+           C 218 712, 220 698, 220 676
+           L 220 616
+           C 192 582, 154 582, 132 582 Z
+           M 312 582
+           C 320 668, 276 712, 238 712
+           C 226 712, 224 698, 224 676
+           L 224 616
+           C 252 582, 290 582, 312 582 Z"/>
   <path id="m-hamstrings"
-        d="M 144 832
-           C 134 914, 148 998, 170 1006
-           L 218 1006
-           C 222 916, 222 836, 218 832
-           C 196 828, 164 828, 144 832 Z
-           M 300 832
-           C 310 914, 296 998, 274 1006
-           L 226 1006
-           C 222 916, 222 836, 226 832
-           C 248 828, 280 828, 300 832 Z"/>
+        d="M 144 722
+           C 134 804, 148 888, 170 896
+           L 218 896
+           C 222 806, 222 726, 218 722
+           C 196 718, 164 718, 144 722 Z
+           M 300 722
+           C 310 804, 296 888, 274 896
+           L 226 896
+           C 222 806, 222 726, 226 722
+           C 248 718, 280 718, 300 722 Z"/>
 </g>
 `;
 
