@@ -44,36 +44,67 @@ def figure_bbox(im):
     return (min_x, min_y, max_x + 1, max_y + 1)
 
 
+def figure_runs(im, y, threshold=WHITE_THRESHOLD):
+    rgb = im.convert("RGB")
+    w, _ = rgb.size
+    px = rgb.load()
+    runs, in_run, s = [], False, 0
+    for x in range(w):
+        r, g, b = px[x, y]
+        non_white = (r < threshold or g < threshold or b < threshold)
+        if non_white and not in_run:
+            in_run, s = True, x
+        elif not non_white and in_run:
+            in_run = False; runs.append((s, x - 1))
+    if in_run:
+        runs.append((s, w - 1))
+    return runs
+
+
+def body_centerline(im, y):
+    """Midpoint of the widest non-white run at row y — gives torso centerline
+    without being skewed by asymmetric arms or background marks."""
+    runs = figure_runs(im, y)
+    if not runs:
+        return None
+    best = max(runs, key=lambda r: r[1] - r[0])
+    return (best[0] + best[1]) / 2
+
+
 def normalize_to_reference(src_im, ref_im):
-    """Crop+resize src so its figure bbox lands at the same proportional
-    bounds (and same overall canvas size) as ref's figure bbox."""
+    """Crop+resize src so its figure lands at the same vertical bounds AND
+    its torso centerline matches the reference's torso centerline. Vertical
+    alignment uses the figure bbox; horizontal alignment uses the torso
+    centerline (more reliable than bbox when arms hang asymmetrically)."""
     ref_w, ref_h = ref_im.size
     rbx0, rby0, rbx1, rby1 = figure_bbox(ref_im)
-    ref_bw, ref_bh = rbx1 - rbx0, rby1 - rby0
+    ref_bh = rby1 - rby0
 
     sbx0, sby0, sbx1, sby1 = figure_bbox(src_im)
-    src_bw, src_bh = sbx1 - sbx0, sby1 - sby0
+    src_bh = sby1 - sby0
 
-    # Pick scale so the source figure matches the reference figure size.
-    # Use the larger required scale so the figure fully fits; height tends
-    # to be the dominant axis for these full-body silhouettes.
-    scale = min(ref_bw / src_bw, ref_bh / src_bh)
-    new_bw = src_bw * scale
-    new_bh = src_bh * scale
-
-    # New canvas size before placing the figure on it.
+    # Scale so the figure heights match; height is the most reliable axis.
+    scale = ref_bh / src_bh
     new_src_w = int(round(src_im.width * scale))
     new_src_h = int(round(src_im.height * scale))
     scaled = src_im.resize((new_src_w, new_src_h), Image.LANCZOS)
 
-    # Where the figure bbox lands in the scaled source image.
-    scaled_bx0 = sbx0 * scale
+    # Vertical: align top of figure bbox with reference's top.
     scaled_by0 = sby0 * scale
-
-    # Target: figure bbox should land at (rbx0, rby0) on a (ref_w, ref_h) canvas.
-    # So we want to paste scaled image at offset = (rbx0 - scaled_bx0, rby0 - scaled_by0).
-    offset_x = int(round(rbx0 - scaled_bx0))
     offset_y = int(round(rby0 - scaled_by0))
+
+    # Horizontal: align torso centerline at a row in the abdomen, where
+    # the body is widest and least affected by limbs/hair/hairline.
+    # Sample at ~50% of the figure's height (mid-torso).
+    sample_ref_y = (rby0 + rby1) // 2
+    sample_src_y = int(round((sample_ref_y - offset_y)))
+    sample_src_y = max(0, min(new_src_h - 1, sample_src_y))
+    ref_cx = body_centerline(ref_im, sample_ref_y)
+    src_cx = body_centerline(scaled, sample_src_y)
+    if ref_cx is None or src_cx is None:
+        raise RuntimeError("centerline detection failed")
+    offset_x = int(round(ref_cx - src_cx))
+    print(f"    centering at ref_y={sample_ref_y}: ref_cx={ref_cx:.1f}, src_cx={src_cx:.1f}, dx={offset_x}")
 
     canvas = Image.new("RGB", (ref_w, ref_h), (255, 255, 255))
     canvas.paste(scaled.convert("RGB"), (offset_x, offset_y))
