@@ -46,9 +46,9 @@ const FRONT_LABEL_ANCHORS = {
   biceps:               { anchorX: 95,  anchorY: 400, labelX: 70,  labelY: 400, align: "end"   },
   obliques:             { anchorX: 295, anchorY: 470, labelX: 372, labelY: 470, align: "start" },
   abdominals:           { anchorX: 220, anchorY: 470, labelX: 70,  labelY: 480, align: "end"   },
-  iliopsoas:            { anchorX: 240, anchorY: 605, labelX: 372, labelY: 605, align: "start" },
+  iliopsoas:            { anchorX: 252, anchorY: 540, labelX: 372, labelY: 540, align: "start" },
   quadriceps:           { anchorX: 280, anchorY: 790, labelX: 372, labelY: 790, align: "start" },
-  adductors:            { anchorX: 195, anchorY: 800, labelX: 70,  labelY: 800, align: "end"   },
+  adductors:            { anchorX: 195, anchorY: 760, labelX: 70,  labelY: 760, align: "end"   },
 };
 
 const BACK_LABEL_ANCHORS = {
@@ -138,59 +138,66 @@ const FRONT_MUSCLES_UPPER = `
            C 238 386, 220 388, 220 388
            C 220 388, 202 386, 190 380 Z"/>
 `;
-// Iliopsoas crosses the centerline (groin/pubic area) so the same path
-// works for both figures.
-const FRONT_ILIOPSOAS_PATH = `M 175 560
-           C 168 605, 178 640, 200 648
-           L 240 648
-           C 262 640, 272 605, 265 560
-           C 248 564, 220 568, 220 568
-           C 220 568, 192 564, 175 560 Z`;
+// Iliopsoas: anatomically deep hip flexor running from lumbar vertebrae
+// (psoas major) and iliac fossa (iliacus) down to the lesser trochanter.
+// Drawn as two fan-shaped regions in the lower lumbar/iliac area on each
+// side of the rectus abdominis — NOT over the pubis (which would be the
+// pectineus/恥骨筋群, a different muscle group entirely).
+const FRONT_ILIOPSOAS_PATH = `M 158 455
+           C 150 510, 158 575, 200 645
+           L 220 645
+           L 220 462
+           C 200 455, 175 453, 158 455 Z
+           M 282 455
+           C 290 510, 282 575, 240 645
+           L 220 645
+           L 220 462
+           C 240 455, 265 453, 282 455 Z`;
 
 // Per-leg paths derived from 20-px-step silhouette samples of each asset.
 // Outer edge tracks the lateral leg boundary (pinches inward at mid-thigh,
 // bulges back at the knee); inner edge tracks the medial boundary that
 // moves AWAY from the centerline as the legs spread downward.
-const FRONT_QUAD_LEFT_MALE = `M 88 680
-           C 95 760, 105 830, 95 905
-           L 175 905
-           C 173 820, 200 720, 213 680
-           C 195 675, 110 675, 88 680 Z`;
-const FRONT_QUAD_RIGHT_MALE = `M 352 680
-           C 345 760, 335 830, 345 905
-           L 265 905
-           C 267 820, 240 720, 227 680
-           C 245 675, 330 675, 352 680 Z`;
-const FRONT_QUAD_LEFT_FEMALE = `M 91 680
-           C 100 770, 110 840, 100 905
-           L 183 905
-           C 181 820, 205 720, 213 680
-           C 195 675, 112 675, 91 680 Z`;
-const FRONT_QUAD_RIGHT_FEMALE = `M 349 680
-           C 340 770, 330 840, 340 905
-           L 257 905
-           C 259 820, 235 720, 227 680
-           C 245 675, 328 675, 349 680 Z`;
+const FRONT_QUAD_LEFT_MALE = `M 84 680
+           C 92 760, 102 840, 84 920
+           L 180 920
+           C 178 820, 202 720, 217 680
+           C 198 673, 106 673, 84 680 Z`;
+const FRONT_QUAD_RIGHT_MALE = `M 356 680
+           C 348 760, 338 840, 356 920
+           L 260 920
+           C 262 820, 238 720, 223 680
+           C 242 673, 334 673, 356 680 Z`;
+const FRONT_QUAD_LEFT_FEMALE = `M 90 680
+           C 98 770, 108 850, 92 920
+           L 187 920
+           C 185 820, 207 720, 217 680
+           C 198 673, 110 673, 90 680 Z`;
+const FRONT_QUAD_RIGHT_FEMALE = `M 350 680
+           C 342 770, 332 850, 348 920
+           L 253 920
+           C 255 820, 233 720, 223 680
+           C 242 673, 330 673, 350 680 Z`;
 
 // Adductors fan out from the pubis (narrow at top) down the inner thigh
 // (wider at bottom). Female pelvis is slightly wider so the top sits a few
 // px further from the centerline.
-const FRONT_ADDUCTOR_LEFT_MALE = `M 200 640
-           L 217 640
-           L 188 800
-           L 152 800 Z`;
-const FRONT_ADDUCTOR_RIGHT_MALE = `M 240 640
-           L 223 640
-           L 252 800
-           L 288 800 Z`;
-const FRONT_ADDUCTOR_LEFT_FEMALE = `M 198 640
-           L 217 640
-           L 193 800
-           L 158 800 Z`;
-const FRONT_ADDUCTOR_RIGHT_FEMALE = `M 242 640
-           L 223 640
-           L 247 800
-           L 282 800 Z`;
+const FRONT_ADDUCTOR_LEFT_MALE = `M 202 660
+           L 217 660
+           L 188 820
+           L 145 820 Z`;
+const FRONT_ADDUCTOR_RIGHT_MALE = `M 238 660
+           L 223 660
+           L 252 820
+           L 295 820 Z`;
+const FRONT_ADDUCTOR_LEFT_FEMALE = `M 200 660
+           L 217 660
+           L 193 820
+           L 150 820 Z`;
+const FRONT_ADDUCTOR_RIGHT_FEMALE = `M 240 660
+           L 223 660
+           L 247 820
+           L 290 820 Z`;
 
 const FRONT_MUSCLES_LOWER_MALE = `
   <path id="m-iliopsoas" d="${FRONT_ILIOPSOAS_PATH}"/>
@@ -235,18 +242,18 @@ const BACK_MUSCLES_UPPER = `
            C 244 277, 264 275, 282 275
            C 286 275, 290 275, 294 275 Z"/>
   <path id="m-lats"
-        d="M 130 355
-           C 108 430, 116 495, 150 515
-           L 192 515
-           L 192 360
-           C 175 358, 158 356, 144 355
-           C 138 355, 134 355, 130 355 Z
-           M 316 355
-           C 338 430, 330 495, 296 515
-           L 254 515
-           L 254 360
-           C 271 358, 288 356, 302 355
-           C 308 355, 312 355, 316 355 Z"/>
+        d="M 118 360
+           C 96 450, 102 540, 145 600
+           L 198 600
+           L 198 365
+           C 178 362, 148 360, 128 360
+           C 122 360, 120 360, 118 360 Z
+           M 328 360
+           C 350 450, 344 540, 301 600
+           L 248 600
+           L 248 365
+           C 268 362, 298 360, 318 360
+           C 324 360, 326 360, 328 360 Z"/>
   <path id="m-triceps"
         d="M 70 320
            C 60 405, 75 460, 105 470
@@ -302,50 +309,52 @@ const BACK_GMED_RIGHT_FEMALE = `M 344 540
            C 284 618, 294 568, 308 542
            C 322 534, 336 534, 344 540 Z`;
 
-// Hamstrings: top at glute crease (y≈720), bottom at popliteal fossa (y≈895).
-// Inner edge spreads outward (away from centerline) going down.
-const BACK_HAM_LEFT_MALE = `M 91 720
-           C 100 800, 108 870, 92 895
-           L 175 895
-           C 173 800, 200 730, 207 720
-           C 188 716, 113 716, 91 720 Z`;
-const BACK_HAM_RIGHT_MALE = `M 355 720
-           C 346 800, 338 870, 354 895
-           L 271 895
-           C 273 800, 246 730, 239 720
-           C 258 716, 333 716, 355 720 Z`;
-const BACK_HAM_LEFT_FEMALE = `M 97 720
-           C 105 800, 112 870, 100 895
-           L 183 895
-           C 181 800, 200 730, 207 720
-           C 188 716, 118 716, 97 720 Z`;
-const BACK_HAM_RIGHT_FEMALE = `M 349 720
-           C 341 800, 334 870, 346 895
-           L 263 895
-           C 265 800, 246 730, 239 720
-           C 258 716, 328 716, 349 720 Z`;
+// Hamstrings: top at glute crease (y≈720), bottom just above popliteal fossa
+// (y≈925). Cover the full back-of-thigh bulk to lateral edges.
+const BACK_HAM_LEFT_MALE = `M 86 720
+           C 94 800, 102 880, 86 925
+           L 180 925
+           C 178 815, 202 730, 209 720
+           C 188 714, 108 714, 86 720 Z`;
+const BACK_HAM_RIGHT_MALE = `M 360 720
+           C 352 800, 344 880, 360 925
+           L 266 925
+           C 268 815, 244 730, 237 720
+           C 258 714, 338 714, 360 720 Z`;
+const BACK_HAM_LEFT_FEMALE = `M 93 720
+           C 100 800, 108 880, 95 925
+           L 187 925
+           C 185 815, 202 730, 209 720
+           C 188 714, 115 714, 93 720 Z`;
+const BACK_HAM_RIGHT_FEMALE = `M 353 720
+           C 346 800, 338 880, 351 925
+           L 259 925
+           C 261 815, 244 730, 237 720
+           C 258 714, 331 714, 353 720 Z`;
 
-// Calves: gastrocnemius bulk from just below knee (y≈935) to mid-shin.
-const BACK_CALF_LEFT_MALE = `M 88 935
-           C 92 1000, 100 1060, 108 1085
-           L 155 1085
-           C 158 1010, 178 950, 180 935
-           C 162 930, 110 930, 88 935 Z`;
-const BACK_CALF_RIGHT_MALE = `M 358 935
-           C 354 1000, 346 1060, 338 1085
-           L 291 1085
-           C 288 1010, 268 950, 266 935
-           C 284 930, 336 930, 358 935 Z`;
-const BACK_CALF_LEFT_FEMALE = `M 102 940
-           C 108 1000, 118 1060, 124 1085
-           L 165 1085
-           C 168 1010, 184 950, 187 940
-           C 170 932, 120 932, 102 940 Z`;
-const BACK_CALF_RIGHT_FEMALE = `M 344 940
-           C 338 1000, 328 1060, 322 1085
-           L 281 1085
-           C 278 1010, 262 950, 259 940
-           C 276 932, 326 932, 344 940 Z`;
+// Calves (gastrocnemius+soleus = 下腿三頭筋): from just below knee crease
+// (y≈930) down past mid-shin to where the achilles tendon narrows
+// (y≈1130). Cover the full muscle bulge on both medial and lateral sides.
+const BACK_CALF_LEFT_MALE = `M 84 930
+           C 88 1010, 98 1080, 106 1135
+           L 160 1135
+           C 162 1020, 182 950, 184 930
+           C 162 924, 106 924, 84 930 Z`;
+const BACK_CALF_RIGHT_MALE = `M 360 930
+           C 356 1010, 346 1080, 338 1135
+           L 284 1135
+           C 282 1020, 262 950, 260 930
+           C 282 924, 338 924, 360 930 Z`;
+const BACK_CALF_LEFT_FEMALE = `M 96 930
+           C 102 1010, 114 1080, 122 1135
+           L 170 1135
+           C 172 1020, 188 950, 191 930
+           C 170 924, 116 924, 96 930 Z`;
+const BACK_CALF_RIGHT_FEMALE = `M 350 930
+           C 344 1010, 332 1080, 324 1135
+           L 276 1135
+           C 274 1020, 258 950, 255 930
+           C 276 924, 330 924, 350 930 Z`;
 
 const BACK_MUSCLES_LOWER_MALE = `
   <path id="m-glutes" d="${BACK_GLUTES_PATH}"/>

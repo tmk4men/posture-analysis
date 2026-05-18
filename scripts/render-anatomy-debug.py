@@ -53,6 +53,34 @@ def extract_template(js: str, var_name: str) -> str:
     return m.group(1)
 
 
+def extract_string_const(js: str, var_name: str) -> str:
+    """Extract a `const NAME = \`...\`;` value that uses template literals
+    (e.g. interpolated paths). Returns the raw template body so callers can
+    substitute interpolations themselves."""
+    pat = re.compile(rf"const {var_name} = `([^`]*)`;", re.DOTALL)
+    m = pat.search(js)
+    if not m:
+        sys.exit(f"could not find {var_name}")
+    return m.group(1)
+
+
+def resolve_lower(js: str, gender: str, side: str) -> str:
+    """Build the muscle HTML for the lower body of front/back, substituting
+    the per-leg path constants. side = 'FRONT' or 'BACK'."""
+    suffix = "FEMALE" if gender == "female" else "MALE"
+    template = extract_string_const(js, f"{side}_MUSCLES_LOWER_{suffix}")
+    # Find every `${IDENTIFIER}` and replace with the value of that const.
+    def replace(match):
+        name = match.group(1)
+        # These constants are simple raw path strings.
+        pat = re.compile(rf'const {name} = `([^`]*)`;', re.DOTALL)
+        m = pat.search(js)
+        if not m:
+            sys.exit(f"could not find referenced const {name}")
+        return m.group(1)
+    return re.sub(r"\$\{([A-Z_]+)\}", replace, template)
+
+
 def img_to_data_uri(path: Path):
     img = Image.open(path).convert("RGBA")
     buf = BytesIO()
@@ -78,14 +106,16 @@ def build_svg(muscles_html: str, img_uri: str, size: tuple[int, int]) -> str:
 
 def main():
     js = ANATOMY_JS.read_text(encoding="utf-8")
-    front_muscles = extract_template(js, "FRONT_MUSCLES")
-    back_muscles = extract_template(js, "BACK_MUSCLES")
+    front_upper = extract_template(js, "FRONT_MUSCLES_UPPER")
+    back_upper = extract_template(js, "BACK_MUSCLES_UPPER")
 
     OUT_DIR.mkdir(exist_ok=True)
     for gender, (front_path, back_path) in IMAGES.items():
+        front_html = front_upper + "\n" + resolve_lower(js, gender, "FRONT")
+        back_html = back_upper + "\n" + resolve_lower(js, gender, "BACK")
         for name, img_path, html in [
-            ("front", front_path, front_muscles),
-            ("back",  back_path,  back_muscles),
+            ("front", front_path, front_html),
+            ("back",  back_path,  back_html),
         ]:
             uri, size = img_to_data_uri(img_path)
             svg = build_svg(html, uri, size)
