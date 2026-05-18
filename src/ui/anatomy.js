@@ -148,9 +148,10 @@ const FRONT_MUSCLES_LOWER = `
            L 298 805 Z"/>
 `;
 // Female base image: legs are shorter, hips slightly wider. Compress the
-// lower-body overlay group vertically (scale-Y) about the top of the group
-// (Y=560) and widen marginally so the quadriceps sit on the actual thighs.
-const FRONT_LOWER_TX_FEMALE = "translate(0 560) scale(1.03 0.88) translate(0 -560)";
+// lower-body overlay group vertically (scale-Y) about Y=550 and shift up
+// 10px so the quadriceps end at the knee and adductors line up on the
+// inner thigh of the female figure.
+const FRONT_LOWER_TX_FEMALE = "translate(0 550) scale(1.03 0.84) translate(0 -550) translate(0 -10)";
 const FRONT_LOWER_IDS = ["iliopsoas", "quadriceps", "adductors"];
 
 const BACK_MUSCLES_UPPER = `
@@ -275,9 +276,9 @@ const BACK_LOWER_IDS = ["glutes", "gluteus_medius", "hamstrings", "calves"];
 function applyLowerTxFemale(anchor, axis, isFront) {
   // Mirror of the SVG transforms above: scale-Y about Y0, optional Y shift.
   if (isFront) {
-    // translate(0 560) scale(1.03 0.88) translate(0 -560)
+    // translate(0 550) scale(1.03 0.84) translate(0 -550) translate(0 -10)
     if (axis === "x") return anchor * 1.03;
-    return 560 + (anchor - 560) * 0.88;
+    return 550 + (anchor - 550) * 0.84 - 10;
   }
   // back: translate(0 540) scale(1.0 0.85) translate(0 -540) translate(0 -10)
   if (axis === "x") return anchor;
