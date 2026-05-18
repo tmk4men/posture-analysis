@@ -151,11 +151,14 @@ export function renderReport({ findings, patient, photos }) {
     .map((p) => trainingCardHtml(p))
     .join("");
 
+  const freq = Math.min(5, Math.max(1, parseInt(findings.weeklyFrequency, 10) || 2));
+  const freqLabel = freq >= 5 ? "週5回以上" : `週${freq}回`;
+
   const page2 = `
     <article class="report-page report-page--2">
       <header class="report-head report-head--green">
         <div class="report-head__brand">POSTURA <span>Training Plan</span></div>
-        <h1 class="report-head__title">姿勢改善 週2回プログラム</h1>
+        <h1 class="report-head__title">姿勢改善 ${escapeHtml(freqLabel)}プログラム</h1>
         <p class="report-head__lead">姿勢分析の結果に基づく個別トレーニングメニュー</p>
       </header>
 
@@ -164,7 +167,7 @@ export function renderReport({ findings, patient, photos }) {
       </ul>
 
       <footer class="report-foot">
-        <small>※ 週2回、無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
+        <small>※ ${escapeHtml(freqLabel)}、無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
       </footer>
     </article>
   `;

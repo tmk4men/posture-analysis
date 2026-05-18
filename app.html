@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260518-0716" />
+  <link rel="stylesheet" href="app.css?v=20260518-0758" />
 </head>
 <body>
   <header class="app-header no-print">
@@ -61,6 +61,16 @@
         <select id="patient-gender">
           <option value="male" selected>男性</option>
           <option value="female">女性</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="patient-weekly-frequency">週何回トレーニング可能か</label>
+        <select id="patient-weekly-frequency">
+          <option value="1">週1回</option>
+          <option value="2" selected>週2回</option>
+          <option value="3">週3回</option>
+          <option value="4">週4回</option>
+          <option value="5">週5回以上</option>
         </select>
       </div>
       <div class="field field--full">
@@ -157,6 +167,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="src/main.js?v=20260518-0716"></script>
+  <script type="module" src="src/main.js?v=20260518-0758"></script>
 </body>
 </html>

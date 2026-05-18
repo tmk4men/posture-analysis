@@ -17,6 +17,7 @@ const SYSTEM_PROMPT = `あなたは整骨院とジムが連携して使う姿勢
 - 渡される計測値は MediaPipe Pose Landmarker による推定値です。誤差を含みます。医学的診断は行いません。
 - "detectedIssues" は、計測値そのものから自動抽出された姿勢上の所見の要約です（指標ごとに独立、姿勢パターン分類は行っていません）。
 - "painAreas" は、患者本人が申告した不調・痛みの部位ラベルのリストです（任意）。空配列もありえます。
+- "weeklyFrequency" は、患者が継続できると申告したトレーニング頻度（週何回）です。
 - 診断文は detectedIssues と painAreas の両方と矛盾しないように書いてください。
 
 【出力ルール】
@@ -32,6 +33,7 @@ diagnosis の要件：
 - 検出された数値そのもの（"+12.3%" など）はレポート本文に出さず、患者向けの自然な表現に置き換える。
 - 「猫背タイプ」「反り腰タイプ」のような姿勢分類ラベルは使わず、見られた特徴を素直に描写する（例：「背中が丸くなりやすい姿勢」「腰の反りが強めの姿勢」）。
 - 影響の説明と、改善できる前向きな見通しを1文添える。
+- 見通しを述べる際は、入力された weeklyFrequency を反映して「週N回のトレーニング…」と書く（例：週1回／週3回／週5回以上）。
 - 参考例「左右で肩の高さに差が見られ、頭もやや前方へ出やすい姿勢です。デスクワークなどで片側に負担が集中している可能性があります。週2回のトレーニングと、緊張した筋肉のストレッチを続けることで、徐々に整っていく見通しです。」
 
 注意：
@@ -48,7 +50,7 @@ export function getDefaultModel(provider) {
   return DEFAULT_MODELS[provider] ?? "";
 }
 
-function buildUserPayload(patient, metricsByView, painAreas) {
+function buildUserPayload(patient, metricsByView, painAreas, weeklyFrequency) {
   return {
     patient: {
       name: patient.name || null,
@@ -58,6 +60,7 @@ function buildUserPayload(patient, metricsByView, painAreas) {
     metrics: metricsByView,
     detectedIssues: summarizeIssues(metricsByView),
     painAreas: painAreaLabels(painAreas),
+    weeklyFrequency,
     閾値の目安: {
       肩の傾き: "±2° 以上で左右差あり",
       骨盤の傾き: "±2° 以上で左右差あり",
@@ -181,9 +184,13 @@ async function callAnthropic({ model, apiKey, system, user }) {
 export async function generateFindings(settings, patient, metricsByView) {
   const { mode, provider } = settings;
   const painAreas = patient.painAreas || [];
+  const weeklyFrequency = Math.min(
+    5,
+    Math.max(1, parseInt(patient.weeklyFrequency, 10) || 2),
+  );
 
   // Deterministic picks happen regardless of AI availability.
-  const rec = deriveRecommendations(metricsByView, painAreas);
+  const rec = deriveRecommendations(metricsByView, painAreas, weeklyFrequency);
 
   if (provider === "none") {
     return {
@@ -199,7 +206,11 @@ export async function generateFindings(settings, patient, metricsByView) {
   const model = settings.model || DEFAULT_MODELS[provider];
   if (!model) throw new Error(`未対応のプロバイダー: ${provider}`);
 
-  const userText = JSON.stringify(buildUserPayload(patient, metricsByView, painAreas), null, 2);
+  const userText = JSON.stringify(
+    buildUserPayload(patient, metricsByView, painAreas, weeklyFrequency),
+    null,
+    2,
+  );
 
   let raw;
   try {

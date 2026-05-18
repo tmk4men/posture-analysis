@@ -187,6 +187,13 @@ function collectPainAreas() {
   ).map((el) => el.value);
 }
 
+function collectWeeklyFrequency() {
+  const raw = document.getElementById("patient-weekly-frequency")?.value;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return 2;
+  return Math.min(5, Math.max(1, n));
+}
+
 async function onAnalyze() {
   const settings = loadSettings();
   const patient = {
@@ -194,6 +201,7 @@ async function onAnalyze() {
     date: document.getElementById("patient-date").value,
     gender: document.getElementById("patient-gender").value,
     painAreas: collectPainAreas(),
+    weeklyFrequency: collectWeeklyFrequency(),
   };
   const summary = summarizeAll(state.metricsByView);
 

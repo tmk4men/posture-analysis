@@ -340,14 +340,27 @@ function pickFocused(candidates, targetId, kind, rng, allAssets) {
   return pickOne(topTier.map((s) => s.id), rng);
 }
 
-// Build a training plan (target 4 cards, min 1). Steps:
+// Map 週1〜5回 → target number of training cards.
+// 週2回 = 6種目 が現行の納品基準。週1回は要点だけ、週3回以上は徐々に種目数を増やす。
+const PLAN_SIZE_BY_FREQUENCY = { 1: 4, 2: 6, 3: 8, 4: 10, 5: 12 };
+
+export function planSizeForFrequency(weeklyFrequency) {
+  const n = Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
+  return PLAN_SIZE_BY_FREQUENCY[n];
+}
+
+// Build a training plan sized by weekly frequency (default 6 = 週2回). Steps:
 //   1) For each WEAK muscle in severity order, pick the most focused strength asset.
 //   2) For each TIGHT muscle in severity order, pick the most focused stretch asset.
 //   3) Top up by re-iterating the higher-severity muscles for more variety on
 //      whichever side (weak vs tight) has the strongest unfilled finding.
 // No hardcoded generic fallback — if no clinical candidates remain we show fewer
 // cards rather than padding with unrelated exercises.
-function buildTrainingPlan(weakList, tightList, rng) {
+function buildTrainingPlan(weakList, tightList, rng, target) {
+  const totalCap = target;
+  // 現行 (週2回=6) では強化4 / ストレッチ6 の比率。同じ 2:3 比率を維持して
+  // 種目数を変える。例：週1回 → 強化3/全4、週3回 → 強化6/全8。
+  const phase1Cap = Math.max(1, Math.round((totalCap * 2) / 3));
   const strengthByMuscle = new Map();
   const stretchByMuscle = new Map();
   for (const asset of EXERCISE_ASSETS) {
@@ -371,9 +384,9 @@ function buildTrainingPlan(weakList, tightList, rng) {
     ...tightList.map((m) => [`t:${m.id}`, m.severity ?? 0]),
   ]);
 
-  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap at 4 cards
+  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap phase1Cap
   for (const muscleId of weakIds) {
-    if (plan.length >= 4) break;
+    if (plan.length >= phase1Cap) break;
     const candidates = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
     const pick = pickFocused(candidates, muscleId, "strength", rng, EXERCISE_ASSETS);
@@ -381,9 +394,9 @@ function buildTrainingPlan(weakList, tightList, rng) {
     plan.push({ assetId: pick });
   }
 
-  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at 6 cards
+  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at totalCap
   for (const muscleId of tightIds) {
-    if (plan.length >= 6) break;
+    if (plan.length >= totalCap) break;
     const candidates = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
     const pick = pickFocused(candidates, muscleId, "stretch", rng, EXERCISE_ASSETS);
@@ -394,7 +407,7 @@ function buildTrainingPlan(weakList, tightList, rng) {
   // Phase 3: top-up. Each round, pick from the SEVERITY-HIGHEST muscle that
   // still has unused candidates — alternating between weak and tight by which
   // unfilled finding is more pressing for THIS patient.
-  while (plan.length < 6) {
+  while (plan.length < totalCap) {
     const options = [];
     for (const muscleId of weakIds) {
       const cands = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
@@ -417,7 +430,7 @@ function buildTrainingPlan(weakList, tightList, rng) {
     plan.push({ assetId: pick });
   }
 
-  return plan.slice(0, 6);
+  return plan.slice(0, totalCap);
 }
 
 // Compact summary string of detected issues — passed to the AI so the diagnosis
@@ -537,7 +550,7 @@ export function painAreaLabels(painAreas) {
     .filter(Boolean);
 }
 
-export function deriveRecommendations(metricsByView, painAreas = []) {
+export function deriveRecommendations(metricsByView, painAreas = [], weeklyFrequency = 2) {
   const issues = [
     ...detectIssues(metricsByView),
     ...painAreaIssues(painAreas),
@@ -568,7 +581,8 @@ export function deriveRecommendations(metricsByView, painAreas = []) {
   const tightMuscles = toList(tightAgg);
 
   const rng = makeRng(metricSeed(metricsByView));
-  const trainingPlan = buildTrainingPlan(weakMuscles, tightMuscles, rng);
+  const target = planSizeForFrequency(weeklyFrequency);
+  const trainingPlan = buildTrainingPlan(weakMuscles, tightMuscles, rng, target);
 
   // 表示用に severity を落とす（report.js は {id, note} だけ参照）
   const stripSeverity = (m) => ({ id: m.id, note: m.note });
@@ -577,5 +591,6 @@ export function deriveRecommendations(metricsByView, painAreas = []) {
     weakMuscles: weakMuscles.map(stripSeverity),
     tightMuscles: tightMuscles.map(stripSeverity),
     trainingPlan,
+    weeklyFrequency: Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2)),
   };
 }
