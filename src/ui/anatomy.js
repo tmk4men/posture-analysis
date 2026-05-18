@@ -4,13 +4,12 @@
 // overlay is coloured (mix-blend-mode multiply) so the base illustration
 // shows through.
 //
-// The female illustration shares the same canvas size and overall skeleton
-// layout as the male, but the hips and leg-spread sit further apart. A
-// uniform scale-about-centerline doesn't add gap between the two leg
-// overlays (points near the centerline barely move), so per-leg muscles
-// (quads, adductors, hamstrings, calves, gluteus medius) are translated
-// outward by FEMALE_LEG_DX, while centerline-crossing muscles (iliopsoas,
-// glutes) stay put.
+// The female illustration shares the canvas size with the male, but the
+// thighs and calves sit slightly closer to the centerline (legs less spread
+// than the male figure in this artwork). Because the difference is uneven —
+// the gap varies by y down the leg — there is no single shift that fits
+// both. Each per-leg lower-body muscle therefore has separate _MALE / _FEMALE
+// path constants tracing the actual silhouette of each figure.
 
 const V = new URL(import.meta.url).search;
 const { MUSCLES } = await import("../data/muscles.js" + V);
@@ -65,21 +64,17 @@ const BACK_LABEL_ANCHORS = {
   calves:                { anchorX: 222, anchorY: 1010, labelX: 70, labelY: 1010, align: "end"  },
 };
 
-// How far (in image pixels) each leg's overlay is pushed outward on the
-// female figure. Applied as +dx to right-leg overlays and -dx to left-leg
-// overlays. Centerline-crossing overlays (iliopsoas, glutes) are not shifted.
-const FEMALE_LEG_DX = 15;
-
-// Per-muscle leader-line anchor offsets used only for the female figure.
-// Keys = muscle id; value = signed dx added to anchorX (anchorY unchanged).
-// Only side-specific muscles need an offset; muscles whose anchors sit on
-// the centerline (calves) or whose paths cross it (iliopsoas, glutes) keep
-// the male anchors unchanged.
+// Label leader-line anchors point at the highlighted muscle overlay. Because
+// the female lower-body overlays have their own paths (positioned slightly
+// closer to the centerline than the male's), per-muscle anchor offsets shift
+// each leader so it still lands on the overlay. Keys = muscle id; values =
+// signed dx (anchorY unchanged). Side-specific muscles only — centerline
+// muscles (iliopsoas, glutes, calves anchor) keep the male anchors.
 const FEMALE_ANCHOR_DX = {
-  quadriceps: +FEMALE_LEG_DX,      // front, right side
-  adductors:  -FEMALE_LEG_DX,      // front, left side
-  hamstrings: +FEMALE_LEG_DX,      // back, right side
-  gluteus_medius: -FEMALE_LEG_DX,  // back, left side
+  quadriceps: -8,      // front right leg (its inner edge sits ~8 px closer to center)
+  adductors:  +8,      // front left adductor (inner thigh) sits ~8 px closer to center
+  hamstrings: -8,      // back right leg
+  gluteus_medius: +6,  // back left hip
 };
 
 // Muscle overlay paths — positioned over anatomical regions on each image.
@@ -143,55 +138,70 @@ const FRONT_MUSCLES_UPPER = `
            C 238 386, 220 388, 220 388
            C 220 388, 202 386, 190 380 Z"/>
 `;
-// Per-leg sub-paths. The male overlay reuses them in a single <path> per
-// muscle (no transform). The female overlay places the left/right halves in
-// separate <g transform="translate(±FEMALE_LEG_DX 0)"> wrappers so each leg
-// shifts outward independently of the centerline.
+// Iliopsoas crosses the centerline (groin/pubic area) so the same path
+// works for both figures.
 const FRONT_ILIOPSOAS_PATH = `M 175 560
            C 168 605, 178 640, 200 648
            L 240 648
            C 262 640, 272 605, 265 560
            C 248 564, 220 568, 220 568
            C 220 568, 192 564, 175 560 Z`;
-const FRONT_QUAD_LEFT_PATH = `M 128 670
-           C 120 770, 142 880, 162 920
-           L 215 920
-           C 218 800, 218 685, 215 670
-           C 196 665, 152 665, 128 670 Z`;
-const FRONT_QUAD_RIGHT_PATH = `M 312 670
-           C 320 770, 298 880, 278 920
-           L 225 920
-           C 222 800, 222 685, 225 670
-           C 244 665, 288 665, 312 670 Z`;
-const FRONT_ADDUCTOR_LEFT_PATH = `M 165 635
-           L 215 635
-           L 180 805
-           L 142 805 Z`;
-const FRONT_ADDUCTOR_RIGHT_PATH = `M 275 635
-           L 225 635
-           L 260 805
-           L 298 805 Z`;
+
+// Per-leg paths derived from 20-px-step silhouette samples of each asset.
+// Outer edge tracks the lateral leg boundary (pinches inward at mid-thigh,
+// bulges back at the knee); inner edge tracks the medial boundary that
+// moves AWAY from the centerline as the legs spread downward.
+const FRONT_QUAD_LEFT_MALE = `M 88 680
+           C 95 760, 105 830, 95 905
+           L 175 905
+           C 173 820, 200 720, 213 680
+           C 195 675, 110 675, 88 680 Z`;
+const FRONT_QUAD_RIGHT_MALE = `M 352 680
+           C 345 760, 335 830, 345 905
+           L 265 905
+           C 267 820, 240 720, 227 680
+           C 245 675, 330 675, 352 680 Z`;
+const FRONT_QUAD_LEFT_FEMALE = `M 91 680
+           C 100 770, 110 840, 100 905
+           L 183 905
+           C 181 820, 205 720, 213 680
+           C 195 675, 112 675, 91 680 Z`;
+const FRONT_QUAD_RIGHT_FEMALE = `M 349 680
+           C 340 770, 330 840, 340 905
+           L 257 905
+           C 259 820, 235 720, 227 680
+           C 245 675, 328 675, 349 680 Z`;
+
+// Adductors fan out from the pubis (narrow at top) down the inner thigh
+// (wider at bottom). Female pelvis is slightly wider so the top sits a few
+// px further from the centerline.
+const FRONT_ADDUCTOR_LEFT_MALE = `M 200 640
+           L 217 640
+           L 188 800
+           L 152 800 Z`;
+const FRONT_ADDUCTOR_RIGHT_MALE = `M 240 640
+           L 223 640
+           L 252 800
+           L 288 800 Z`;
+const FRONT_ADDUCTOR_LEFT_FEMALE = `M 198 640
+           L 217 640
+           L 193 800
+           L 158 800 Z`;
+const FRONT_ADDUCTOR_RIGHT_FEMALE = `M 242 640
+           L 223 640
+           L 247 800
+           L 282 800 Z`;
 
 const FRONT_MUSCLES_LOWER_MALE = `
   <path id="m-iliopsoas" d="${FRONT_ILIOPSOAS_PATH}"/>
-  <path id="m-quadriceps" d="${FRONT_QUAD_LEFT_PATH} ${FRONT_QUAD_RIGHT_PATH}"/>
-  <path id="m-adductors" d="${FRONT_ADDUCTOR_LEFT_PATH} ${FRONT_ADDUCTOR_RIGHT_PATH}"/>
+  <path id="m-quadriceps" d="${FRONT_QUAD_LEFT_MALE} ${FRONT_QUAD_RIGHT_MALE}"/>
+  <path id="m-adductors" d="${FRONT_ADDUCTOR_LEFT_MALE} ${FRONT_ADDUCTOR_RIGHT_MALE}"/>
 `;
 
-// Female: iliopsoas crosses the centerline so stays put. Quads + adductors
-// belong to a single leg each, so the right half shifts +FEMALE_LEG_DX and
-// the left half shifts -FEMALE_LEG_DX, putting the inner edges further apart
-// to match the wider female hip/leg spread.
 const FRONT_MUSCLES_LOWER_FEMALE = `
   <path id="m-iliopsoas" d="${FRONT_ILIOPSOAS_PATH}"/>
-  <g id="m-quadriceps">
-    <path d="${FRONT_QUAD_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
-    <path d="${FRONT_QUAD_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
-  </g>
-  <g id="m-adductors">
-    <path d="${FRONT_ADDUCTOR_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
-    <path d="${FRONT_ADDUCTOR_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
-  </g>
+  <path id="m-quadriceps" d="${FRONT_QUAD_LEFT_FEMALE} ${FRONT_QUAD_RIGHT_FEMALE}"/>
+  <path id="m-adductors" d="${FRONT_ADDUCTOR_LEFT_FEMALE} ${FRONT_ADDUCTOR_RIGHT_FEMALE}"/>
 `;
 
 const BACK_MUSCLES_UPPER = `
@@ -258,6 +268,7 @@ const BACK_MUSCLES_UPPER = `
            L 224 590
            L 224 275 Z"/>
 `;
+// Glutes meet at the cleft (centerline) so the path works for both figures.
 const BACK_GLUTES_PATH = `M 132 560
            C 112 680, 165 730, 208 730
            C 220 730, 222 712, 222 682
@@ -268,61 +279,86 @@ const BACK_GLUTES_PATH = `M 132 560
            C 226 730, 224 712, 224 682
            L 224 582
            C 250 555, 290 555, 314 560 Z`;
-const BACK_GMED_LEFT_PATH = `M 108 540
-           C 96 608, 116 650, 140 650
-           L 158 650
-           C 160 618, 154 572, 140 545
-           C 126 535, 114 535, 108 540 Z`;
-const BACK_GMED_RIGHT_PATH = `M 338 540
-           C 350 608, 330 650, 306 650
-           L 288 650
-           C 286 618, 292 572, 306 545
-           C 320 535, 332 535, 338 540 Z`;
-const BACK_HAM_LEFT_PATH = `M 144 720
-           C 134 800, 148 880, 170 895
-           L 218 895
-           C 222 805, 222 724, 218 720
-           C 196 716, 164 716, 144 720 Z`;
-const BACK_HAM_RIGHT_PATH = `M 300 720
-           C 310 800, 296 880, 274 895
-           L 226 895
-           C 222 805, 222 724, 226 720
-           C 248 716, 280 716, 300 720 Z`;
-const BACK_CALF_LEFT_PATH = `M 150 935
-           C 140 1010, 158 1075, 180 1085
-           L 215 1085
-           C 218 1010, 218 940, 215 935
-           C 196 930, 168 930, 150 935 Z`;
-const BACK_CALF_RIGHT_PATH = `M 294 935
-           C 304 1010, 286 1075, 264 1085
-           L 229 1085
-           C 226 1010, 226 940, 229 935
-           C 248 930, 276 930, 294 935 Z`;
+
+// Gluteus medius sits on the upper outer hip — small triangular patch.
+const BACK_GMED_LEFT_MALE = `M 98 540
+           C 88 610, 112 650, 138 650
+           L 156 650
+           C 158 618, 148 568, 134 542
+           C 120 534, 106 534, 98 540 Z`;
+const BACK_GMED_RIGHT_MALE = `M 348 540
+           C 358 610, 334 650, 308 650
+           L 290 650
+           C 288 618, 298 568, 312 542
+           C 326 534, 340 534, 348 540 Z`;
+const BACK_GMED_LEFT_FEMALE = `M 102 540
+           C 92 610, 116 650, 142 650
+           L 160 650
+           C 162 618, 152 568, 138 542
+           C 124 534, 110 534, 102 540 Z`;
+const BACK_GMED_RIGHT_FEMALE = `M 344 540
+           C 354 610, 330 650, 304 650
+           L 286 650
+           C 284 618, 294 568, 308 542
+           C 322 534, 336 534, 344 540 Z`;
+
+// Hamstrings: top at glute crease (y≈720), bottom at popliteal fossa (y≈895).
+// Inner edge spreads outward (away from centerline) going down.
+const BACK_HAM_LEFT_MALE = `M 91 720
+           C 100 800, 108 870, 92 895
+           L 175 895
+           C 173 800, 200 730, 207 720
+           C 188 716, 113 716, 91 720 Z`;
+const BACK_HAM_RIGHT_MALE = `M 355 720
+           C 346 800, 338 870, 354 895
+           L 271 895
+           C 273 800, 246 730, 239 720
+           C 258 716, 333 716, 355 720 Z`;
+const BACK_HAM_LEFT_FEMALE = `M 97 720
+           C 105 800, 112 870, 100 895
+           L 183 895
+           C 181 800, 200 730, 207 720
+           C 188 716, 118 716, 97 720 Z`;
+const BACK_HAM_RIGHT_FEMALE = `M 349 720
+           C 341 800, 334 870, 346 895
+           L 263 895
+           C 265 800, 246 730, 239 720
+           C 258 716, 328 716, 349 720 Z`;
+
+// Calves: gastrocnemius bulk from just below knee (y≈935) to mid-shin.
+const BACK_CALF_LEFT_MALE = `M 88 935
+           C 92 1000, 100 1060, 108 1085
+           L 155 1085
+           C 158 1010, 178 950, 180 935
+           C 162 930, 110 930, 88 935 Z`;
+const BACK_CALF_RIGHT_MALE = `M 358 935
+           C 354 1000, 346 1060, 338 1085
+           L 291 1085
+           C 288 1010, 268 950, 266 935
+           C 284 930, 336 930, 358 935 Z`;
+const BACK_CALF_LEFT_FEMALE = `M 102 940
+           C 108 1000, 118 1060, 124 1085
+           L 165 1085
+           C 168 1010, 184 950, 187 940
+           C 170 932, 120 932, 102 940 Z`;
+const BACK_CALF_RIGHT_FEMALE = `M 344 940
+           C 338 1000, 328 1060, 322 1085
+           L 281 1085
+           C 278 1010, 262 950, 259 940
+           C 276 932, 326 932, 344 940 Z`;
 
 const BACK_MUSCLES_LOWER_MALE = `
   <path id="m-glutes" d="${BACK_GLUTES_PATH}"/>
-  <path id="m-gluteus_medius" d="${BACK_GMED_LEFT_PATH} ${BACK_GMED_RIGHT_PATH}"/>
-  <path id="m-hamstrings" d="${BACK_HAM_LEFT_PATH} ${BACK_HAM_RIGHT_PATH}"/>
-  <path id="m-calves" d="${BACK_CALF_LEFT_PATH} ${BACK_CALF_RIGHT_PATH}"/>
+  <path id="m-gluteus_medius" d="${BACK_GMED_LEFT_MALE} ${BACK_GMED_RIGHT_MALE}"/>
+  <path id="m-hamstrings" d="${BACK_HAM_LEFT_MALE} ${BACK_HAM_RIGHT_MALE}"/>
+  <path id="m-calves" d="${BACK_CALF_LEFT_MALE} ${BACK_CALF_RIGHT_MALE}"/>
 `;
 
-// Female: glutes meet at the gluteal cleft (centerline) so the path is
-// unshifted. Everything else is per-leg and shifts outward by FEMALE_LEG_DX
-// on each side.
 const BACK_MUSCLES_LOWER_FEMALE = `
   <path id="m-glutes" d="${BACK_GLUTES_PATH}"/>
-  <g id="m-gluteus_medius">
-    <path d="${BACK_GMED_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
-    <path d="${BACK_GMED_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
-  </g>
-  <g id="m-hamstrings">
-    <path d="${BACK_HAM_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
-    <path d="${BACK_HAM_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
-  </g>
-  <g id="m-calves">
-    <path d="${BACK_CALF_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
-    <path d="${BACK_CALF_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
-  </g>
+  <path id="m-gluteus_medius" d="${BACK_GMED_LEFT_FEMALE} ${BACK_GMED_RIGHT_FEMALE}"/>
+  <path id="m-hamstrings" d="${BACK_HAM_LEFT_FEMALE} ${BACK_HAM_RIGHT_FEMALE}"/>
+  <path id="m-calves" d="${BACK_CALF_LEFT_FEMALE} ${BACK_CALF_RIGHT_FEMALE}"/>
 `;
 
 // Build callout-label SVG markup for the highlighted muscles only.  Labels

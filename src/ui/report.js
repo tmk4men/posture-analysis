@@ -144,10 +144,6 @@ export function renderReport({ findings, patient, photos }) {
           <ul>${findings.tightMuscles.map((m) => muscleCardHtml(m, "tight")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
         </div>
       </section>
-
-      <footer class="report-foot">
-        <small>※ 本所見はAIによる姿勢推定値からの自動生成であり、医学的診断ではありません。施術判断は施術者によります。</small>
-      </footer>
     </article>
   `;
 
