@@ -872,7 +872,8 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   gap: 0.7rem;
   flex: 1;
 }
-/* Each card is just the pre-rendered exercise image with a number badge. */
+/* Each card is the pre-rendered exercise image plus a dynamic 目安 panel
+   absolutely positioned over the white-out area in the bottom-right. */
 .training-card {
   position: relative;
   border: 1px solid #d6e2d8;
@@ -891,6 +892,53 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   display: block;
   background: #fff;
 }
+.training-card__rx {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  width: 38%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35em;
+  pointer-events: none;
+}
+.training-card__rx-label {
+  font-size: clamp(0.7rem, 1.6cqw, 1rem);
+  font-weight: 700;
+  color: #0f3a3a;
+  letter-spacing: 0.04em;
+}
+.training-card__rx-value {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid #0f3a3a;
+  border-radius: 10px;
+  padding: 0.55em 0.4em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.15;
+  color: #18222e;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.training-card__rx-reps {
+  font-size: clamp(1.05rem, 2.3cqw, 1.55rem);
+}
+.training-card__rx-sep {
+  font-size: clamp(0.78rem, 1.6cqw, 1.1rem);
+  font-weight: 600;
+  color: #4a5868;
+  margin: 0.05em 0;
+}
+.training-card__rx-sets {
+  font-size: clamp(1.05rem, 2.3cqw, 1.55rem);
+}
+.training-card { container-type: inline-size; }
+
 .training-card--empty { grid-column: 1 / -1; padding: 1.2rem; text-align: center; color: var(--muted); }
 
 /* ===== Print rules ===== */

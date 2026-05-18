@@ -17,7 +17,7 @@ const [musclesMod, assetsMod, anatomyMod, recommendMod] = await Promise.all([
 const { MUSCLE_BY_ID } = musclesMod;
 const { ASSET_BY_ID } = assetsMod;
 const { renderAnatomyPanel } = anatomyMod;
-const { painAreaLabels } = recommendMod;
+const { painAreaLabels, prescriptionForFrequency } = recommendMod;
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -56,12 +56,20 @@ function muscleCardHtml(item, role) {
   `;
 }
 
-function trainingCardHtml(plan) {
+function trainingCardHtml(plan, rx) {
   const asset = ASSET_BY_ID[plan.assetId];
   if (!asset) return "";
   return `
     <li class="training-card">
       <img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">
+      <div class="training-card__rx">
+        <div class="training-card__rx-label">目安</div>
+        <div class="training-card__rx-value">
+          <span class="training-card__rx-reps">${rx.reps}回</span>
+          <span class="training-card__rx-sep">×</span>
+          <span class="training-card__rx-sets">${rx.sets}セット</span>
+        </div>
+      </div>
     </li>
   `;
 }
@@ -147,12 +155,13 @@ export function renderReport({ findings, patient, photos }) {
     </article>
   `;
 
-  const trainingCards = findings.trainingPlan
-    .map((p) => trainingCardHtml(p))
-    .join("");
-
   const freq = Math.min(5, Math.max(1, parseInt(findings.weeklyFrequency, 10) || 2));
   const freqLabel = freq >= 5 ? "週5回以上" : `週${freq}回`;
+  const rx = prescriptionForFrequency(freq);
+
+  const trainingCards = findings.trainingPlan
+    .map((p) => trainingCardHtml(p, rx))
+    .join("");
 
   const page2 = `
     <article class="report-page report-page--2">

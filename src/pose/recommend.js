@@ -11,6 +11,22 @@ const [musclesMod, assetsMod] = await Promise.all([
 const { MUSCLE_BY_ID } = musclesMod;
 const { EXERCISE_ASSETS } = assetsMod;
 
+// Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
+// Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s
+// so 12 reps ≈ 45s of cumulative stretch dose per set (Arntz 2024 effective zone).
+const PRESCRIPTION_BY_FREQUENCY = {
+  1: { reps: 15, sets: 3 },
+  2: { reps: 12, sets: 3 },
+  3: { reps: 12, sets: 2 },
+  4: { reps: 10, sets: 2 },
+  5: { reps: 10, sets: 2 },
+};
+
+export function prescriptionForFrequency(weeklyFrequency) {
+  const n = Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
+  return PRESCRIPTION_BY_FREQUENCY[n];
+}
+
 function getMetric(byView, view, key) {
   const arr = byView?.[view];
   if (!arr) return null;
