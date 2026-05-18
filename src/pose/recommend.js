@@ -371,9 +371,9 @@ function buildTrainingPlan(weakList, tightList, rng) {
     ...tightList.map((m) => [`t:${m.id}`, m.severity ?? 0]),
   ]);
 
-  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap at 3 cards
+  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap at 4 cards
   for (const muscleId of weakIds) {
-    if (plan.length >= 3) break;
+    if (plan.length >= 4) break;
     const candidates = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
     const pick = pickFocused(candidates, muscleId, "strength", rng, EXERCISE_ASSETS);
@@ -381,9 +381,9 @@ function buildTrainingPlan(weakList, tightList, rng) {
     plan.push({ assetId: pick });
   }
 
-  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at 4 cards
+  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at 6 cards
   for (const muscleId of tightIds) {
-    if (plan.length >= 4) break;
+    if (plan.length >= 6) break;
     const candidates = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
     if (!candidates.length) continue;
     const pick = pickFocused(candidates, muscleId, "stretch", rng, EXERCISE_ASSETS);
@@ -394,7 +394,7 @@ function buildTrainingPlan(weakList, tightList, rng) {
   // Phase 3: top-up. Each round, pick from the SEVERITY-HIGHEST muscle that
   // still has unused candidates — alternating between weak and tight by which
   // unfilled finding is more pressing for THIS patient.
-  while (plan.length < 4) {
+  while (plan.length < 6) {
     const options = [];
     for (const muscleId of weakIds) {
       const cands = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
@@ -417,7 +417,7 @@ function buildTrainingPlan(weakList, tightList, rng) {
     plan.push({ assetId: pick });
   }
 
-  return plan.slice(0, 4);
+  return plan.slice(0, 6);
 }
 
 // Compact summary string of detected issues — passed to the AI so the diagnosis
