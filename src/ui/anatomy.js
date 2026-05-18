@@ -3,6 +3,14 @@
 // id="m-<muscleId>"; the AI classifies muscles into weak/tight, and the
 // overlay is coloured (mix-blend-mode multiply) so the base illustration
 // shows through.
+//
+// The female illustration shares the same canvas size and overall skeleton
+// layout as the male, but the hips and leg-spread sit further apart. A
+// uniform scale-about-centerline doesn't add gap between the two leg
+// overlays (points near the centerline barely move), so per-leg muscles
+// (quads, adductors, hamstrings, calves, gluteus medius) are translated
+// outward by FEMALE_LEG_DX, while centerline-crossing muscles (iliopsoas,
+// glutes) stay put.
 
 const V = new URL(import.meta.url).search;
 const { MUSCLES } = await import("../data/muscles.js" + V);
@@ -57,9 +65,26 @@ const BACK_LABEL_ANCHORS = {
   calves:                { anchorX: 222, anchorY: 1010, labelX: 70, labelY: 1010, align: "end"  },
 };
 
+// How far (in image pixels) each leg's overlay is pushed outward on the
+// female figure. Applied as +dx to right-leg overlays and -dx to left-leg
+// overlays. Centerline-crossing overlays (iliopsoas, glutes) are not shifted.
+const FEMALE_LEG_DX = 15;
+
+// Per-muscle leader-line anchor offsets used only for the female figure.
+// Keys = muscle id; value = signed dx added to anchorX (anchorY unchanged).
+// Only side-specific muscles need an offset; muscles whose anchors sit on
+// the centerline (calves) or whose paths cross it (iliopsoas, glutes) keep
+// the male anchors unchanged.
+const FEMALE_ANCHOR_DX = {
+  quadriceps: +FEMALE_LEG_DX,      // front, right side
+  adductors:  -FEMALE_LEG_DX,      // front, left side
+  hamstrings: +FEMALE_LEG_DX,      // back, right side
+  gluteus_medius: -FEMALE_LEG_DX,  // back, left side
+};
+
 // Muscle overlay paths — positioned over anatomical regions on each image.
-// Split upper/lower so the lower group can be transformed when the base image
-// is the female figure (shorter legs, wider hips → see FRONT_LOWER_TX_FEMALE).
+// Split upper/lower so the lower group can be transformed independently for
+// the female figure.
 const FRONT_MUSCLES_UPPER = `
   <path id="m-deep_neck_flexors"
         d="M 198 185
@@ -118,40 +143,56 @@ const FRONT_MUSCLES_UPPER = `
            C 238 386, 220 388, 220 388
            C 220 388, 202 386, 190 380 Z"/>
 `;
-const FRONT_MUSCLES_LOWER = `
-  <path id="m-iliopsoas"
-        d="M 175 560
+// Per-leg sub-paths. The male overlay reuses them in a single <path> per
+// muscle (no transform). The female overlay places the left/right halves in
+// separate <g transform="translate(±FEMALE_LEG_DX 0)"> wrappers so each leg
+// shifts outward independently of the centerline.
+const FRONT_ILIOPSOAS_PATH = `M 175 560
            C 168 605, 178 640, 200 648
            L 240 648
            C 262 640, 272 605, 265 560
            C 248 564, 220 568, 220 568
-           C 220 568, 192 564, 175 560 Z"/>
-  <path id="m-quadriceps"
-        d="M 128 670
+           C 220 568, 192 564, 175 560 Z`;
+const FRONT_QUAD_LEFT_PATH = `M 128 670
            C 120 770, 142 880, 162 920
            L 215 920
            C 218 800, 218 685, 215 670
-           C 196 665, 152 665, 128 670 Z
-           M 312 670
+           C 196 665, 152 665, 128 670 Z`;
+const FRONT_QUAD_RIGHT_PATH = `M 312 670
            C 320 770, 298 880, 278 920
            L 225 920
            C 222 800, 222 685, 225 670
-           C 244 665, 288 665, 312 670 Z"/>
-  <path id="m-adductors"
-        d="M 165 635
+           C 244 665, 288 665, 312 670 Z`;
+const FRONT_ADDUCTOR_LEFT_PATH = `M 165 635
            L 215 635
            L 180 805
-           L 142 805 Z
-           M 275 635
+           L 142 805 Z`;
+const FRONT_ADDUCTOR_RIGHT_PATH = `M 275 635
            L 225 635
            L 260 805
-           L 298 805 Z"/>
+           L 298 805 Z`;
+
+const FRONT_MUSCLES_LOWER_MALE = `
+  <path id="m-iliopsoas" d="${FRONT_ILIOPSOAS_PATH}"/>
+  <path id="m-quadriceps" d="${FRONT_QUAD_LEFT_PATH} ${FRONT_QUAD_RIGHT_PATH}"/>
+  <path id="m-adductors" d="${FRONT_ADDUCTOR_LEFT_PATH} ${FRONT_ADDUCTOR_RIGHT_PATH}"/>
 `;
-// Female base image: legs are shorter AND further apart (wider hips, more
-// outward leg-spread). Scale about the figure centerline (X=220, Y=550)
-// so each leg's overlay pushes outward to match the actual leg silhouette.
-const FRONT_LOWER_TX_FEMALE = "translate(220 550) scale(1.12 0.84) translate(-220 -550) translate(0 -10)";
-const FRONT_LOWER_IDS = ["iliopsoas", "quadriceps", "adductors"];
+
+// Female: iliopsoas crosses the centerline so stays put. Quads + adductors
+// belong to a single leg each, so the right half shifts +FEMALE_LEG_DX and
+// the left half shifts -FEMALE_LEG_DX, putting the inner edges further apart
+// to match the wider female hip/leg spread.
+const FRONT_MUSCLES_LOWER_FEMALE = `
+  <path id="m-iliopsoas" d="${FRONT_ILIOPSOAS_PATH}"/>
+  <g id="m-quadriceps">
+    <path d="${FRONT_QUAD_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
+    <path d="${FRONT_QUAD_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
+  </g>
+  <g id="m-adductors">
+    <path d="${FRONT_ADDUCTOR_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
+    <path d="${FRONT_ADDUCTOR_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
+  </g>
+`;
 
 const BACK_MUSCLES_UPPER = `
   <path id="m-upper_traps"
@@ -217,9 +258,7 @@ const BACK_MUSCLES_UPPER = `
            L 224 590
            L 224 275 Z"/>
 `;
-const BACK_MUSCLES_LOWER = `
-  <path id="m-glutes"
-        d="M 132 560
+const BACK_GLUTES_PATH = `M 132 560
            C 112 680, 165 730, 208 730
            C 220 730, 222 712, 222 682
            L 222 582
@@ -228,68 +267,69 @@ const BACK_MUSCLES_LOWER = `
            C 334 680, 281 730, 238 730
            C 226 730, 224 712, 224 682
            L 224 582
-           C 250 555, 290 555, 314 560 Z"/>
-  <path id="m-gluteus_medius"
-        d="M 108 540
+           C 250 555, 290 555, 314 560 Z`;
+const BACK_GMED_LEFT_PATH = `M 108 540
            C 96 608, 116 650, 140 650
            L 158 650
            C 160 618, 154 572, 140 545
-           C 126 535, 114 535, 108 540 Z
-           M 338 540
+           C 126 535, 114 535, 108 540 Z`;
+const BACK_GMED_RIGHT_PATH = `M 338 540
            C 350 608, 330 650, 306 650
            L 288 650
            C 286 618, 292 572, 306 545
-           C 320 535, 332 535, 338 540 Z"/>
-  <path id="m-hamstrings"
-        d="M 144 720
+           C 320 535, 332 535, 338 540 Z`;
+const BACK_HAM_LEFT_PATH = `M 144 720
            C 134 800, 148 880, 170 895
            L 218 895
            C 222 805, 222 724, 218 720
-           C 196 716, 164 716, 144 720 Z
-           M 300 720
+           C 196 716, 164 716, 144 720 Z`;
+const BACK_HAM_RIGHT_PATH = `M 300 720
            C 310 800, 296 880, 274 895
            L 226 895
            C 222 805, 222 724, 226 720
-           C 248 716, 280 716, 300 720 Z"/>
-  <path id="m-calves"
-        d="M 150 935
+           C 248 716, 280 716, 300 720 Z`;
+const BACK_CALF_LEFT_PATH = `M 150 935
            C 140 1010, 158 1075, 180 1085
            L 215 1085
            C 218 1010, 218 940, 215 935
-           C 196 930, 168 930, 150 935 Z
-           M 294 935
+           C 196 930, 168 930, 150 935 Z`;
+const BACK_CALF_RIGHT_PATH = `M 294 935
            C 304 1010, 286 1075, 264 1085
            L 229 1085
            C 226 1010, 226 940, 229 935
-           C 248 930, 276 930, 294 935 Z"/>
-`;
-// Female back: legs short, calves sit higher than the male's, and the legs
-// are more separated. Scale about centerline (X=223, Y=540) so each leg's
-// overlay shifts outward onto its actual silhouette.
-const BACK_LOWER_TX_FEMALE = "translate(223 540) scale(1.10 0.85) translate(-223 -540) translate(0 -10)";
-const BACK_LOWER_IDS = ["glutes", "gluteus_medius", "hamstrings", "calves"];
+           C 248 930, 276 930, 294 935 Z`;
 
-// For the female figure, the leader-line endpoint (anchorX/Y) of a lower-body
-// muscle must follow the same transform applied to its path overlay so the
-// leader still lands on the highlighted region. labelX/Y stay put.
-function applyLowerTxFemale(anchor, axis, isFront) {
-  // Mirror of the SVG transforms above: scale-Y about Y0, optional Y shift.
-  if (isFront) {
-    // translate(220 550) scale(1.12 0.84) translate(-220 -550) translate(0 -10)
-    if (axis === "x") return 220 + (anchor - 220) * 1.12;
-    return 550 + (anchor - 550) * 0.84 - 10;
-  }
-  // back: translate(223 540) scale(1.10 0.85) translate(-223 -540) translate(0 -10)
-  if (axis === "x") return 223 + (anchor - 223) * 1.10;
-  return 540 + (anchor - 540) * 0.85 - 10;
-}
+const BACK_MUSCLES_LOWER_MALE = `
+  <path id="m-glutes" d="${BACK_GLUTES_PATH}"/>
+  <path id="m-gluteus_medius" d="${BACK_GMED_LEFT_PATH} ${BACK_GMED_RIGHT_PATH}"/>
+  <path id="m-hamstrings" d="${BACK_HAM_LEFT_PATH} ${BACK_HAM_RIGHT_PATH}"/>
+  <path id="m-calves" d="${BACK_CALF_LEFT_PATH} ${BACK_CALF_RIGHT_PATH}"/>
+`;
+
+// Female: glutes meet at the gluteal cleft (centerline) so the path is
+// unshifted. Everything else is per-leg and shifts outward by FEMALE_LEG_DX
+// on each side.
+const BACK_MUSCLES_LOWER_FEMALE = `
+  <path id="m-glutes" d="${BACK_GLUTES_PATH}"/>
+  <g id="m-gluteus_medius">
+    <path d="${BACK_GMED_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
+    <path d="${BACK_GMED_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
+  </g>
+  <g id="m-hamstrings">
+    <path d="${BACK_HAM_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
+    <path d="${BACK_HAM_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
+  </g>
+  <g id="m-calves">
+    <path d="${BACK_CALF_LEFT_PATH}"  transform="translate(${-FEMALE_LEG_DX} 0)"/>
+    <path d="${BACK_CALF_RIGHT_PATH}" transform="translate(${+FEMALE_LEG_DX} 0)"/>
+  </g>
+`;
 
 // Build callout-label SVG markup for the highlighted muscles only.  Labels
 // sit beside the figure with a thin leader line pointing back to the muscle,
 // so the patient can read both the colour and the name at a glance.
 function buildLabels(anchors, weakSet, tightSet, opts = {}) {
-  const { lowerIds = [], gender = "male", side = "front" } = opts;
-  const lowerSet = new Set(lowerIds);
+  const { gender = "male" } = opts;
   const lines = [];
   for (const [muscleId, pos] of Object.entries(anchors)) {
     let role = null;
@@ -303,9 +343,8 @@ function buildLabels(anchors, weakSet, tightSet, opts = {}) {
 
     let anchorX = pos.anchorX;
     let anchorY = pos.anchorY;
-    if (gender === "female" && lowerSet.has(muscleId)) {
-      anchorX = applyLowerTxFemale(pos.anchorX, "x", side === "front");
-      anchorY = applyLowerTxFemale(pos.anchorY, "y", side === "front");
+    if (gender === "female" && FEMALE_ANCHOR_DX[muscleId] != null) {
+      anchorX += FEMALE_ANCHOR_DX[muscleId];
     }
 
     lines.push(`
@@ -332,28 +371,28 @@ function escapeXml(s) {
 }
 
 function frontSvg(weakSet, tightSet, gender) {
-  const lowerTx = gender === "female" ? FRONT_LOWER_TX_FEMALE : "";
+  const lower = gender === "female" ? FRONT_MUSCLES_LOWER_FEMALE : FRONT_MUSCLES_LOWER_MALE;
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${FRONT_W} ${FRONT_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
   <image href="${FRONT_IMG[gender]}" x="0" y="0" width="${FRONT_W}" height="${FRONT_H}" preserveAspectRatio="xMidYMid meet"/>
   <g class="muscle-overlay" fill="transparent" stroke="none">
     ${FRONT_MUSCLES_UPPER}
-    <g transform="${lowerTx}">${FRONT_MUSCLES_LOWER}</g>
+    ${lower}
   </g>
-  ${buildLabels(FRONT_LABEL_ANCHORS, weakSet, tightSet, { lowerIds: FRONT_LOWER_IDS, gender, side: "front" })}
+  ${buildLabels(FRONT_LABEL_ANCHORS, weakSet, tightSet, { gender })}
 </svg>`;
 }
 
 function backSvg(weakSet, tightSet, gender) {
-  const lowerTx = gender === "female" ? BACK_LOWER_TX_FEMALE : "";
+  const lower = gender === "female" ? BACK_MUSCLES_LOWER_FEMALE : BACK_MUSCLES_LOWER_MALE;
   return `
 <svg class="anatomy-svg" viewBox="0 0 ${BACK_W} ${BACK_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
   <image href="${BACK_IMG[gender]}" x="0" y="0" width="${BACK_W}" height="${BACK_H}" preserveAspectRatio="xMidYMid meet"/>
   <g class="muscle-overlay" fill="transparent" stroke="none">
     ${BACK_MUSCLES_UPPER}
-    <g transform="${lowerTx}">${BACK_MUSCLES_LOWER}</g>
+    ${lower}
   </g>
-  ${buildLabels(BACK_LABEL_ANCHORS, weakSet, tightSet, { lowerIds: BACK_LOWER_IDS, gender, side: "back" })}
+  ${buildLabels(BACK_LABEL_ANCHORS, weakSet, tightSet, { gender })}
 </svg>`;
 }
 
