@@ -559,11 +559,9 @@ export function deriveRecommendations(metricsByView, painAreas = []) {
     }
   }
 
-  // 上位3筋肉に絞る（人体図のハイライトを散らし過ぎず、患者ごとの差を出すため）
   const toList = (m) =>
     [...m.entries()]
       .sort((a, b) => b[1].severity - a[1].severity)
-      .slice(0, 3)
       .map(([id, v]) => ({ id, note: v.note, severity: v.severity }));
 
   const weakMuscles = toList(weakAgg);
