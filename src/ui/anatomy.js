@@ -147,11 +147,10 @@ const FRONT_MUSCLES_LOWER = `
            L 260 805
            L 298 805 Z"/>
 `;
-// Female base image: legs are shorter, hips slightly wider. Compress the
-// lower-body overlay group vertically (scale-Y) about Y=550 and shift up
-// 10px so the quadriceps end at the knee and adductors line up on the
-// inner thigh of the female figure.
-const FRONT_LOWER_TX_FEMALE = "translate(0 550) scale(1.03 0.84) translate(0 -550) translate(0 -10)";
+// Female base image: legs are shorter AND further apart (wider hips, more
+// outward leg-spread). Scale about the figure centerline (X=220, Y=550)
+// so each leg's overlay pushes outward to match the actual leg silhouette.
+const FRONT_LOWER_TX_FEMALE = "translate(220 550) scale(1.12 0.84) translate(-220 -550) translate(0 -10)";
 const FRONT_LOWER_IDS = ["iliopsoas", "quadriceps", "adductors"];
 
 const BACK_MUSCLES_UPPER = `
@@ -264,10 +263,10 @@ const BACK_MUSCLES_LOWER = `
            C 226 1010, 226 940, 229 935
            C 248 930, 276 930, 294 935 Z"/>
 `;
-// Female back: legs short, calves sit much higher than the male's. Compress
-// vertically about Y=540 (top of gluteus medius) and shift the whole group
-// up 10px so the calves land on the calf.
-const BACK_LOWER_TX_FEMALE = "translate(0 540) scale(1.0 0.85) translate(0 -540) translate(0 -10)";
+// Female back: legs short, calves sit higher than the male's, and the legs
+// are more separated. Scale about centerline (X=223, Y=540) so each leg's
+// overlay shifts outward onto its actual silhouette.
+const BACK_LOWER_TX_FEMALE = "translate(223 540) scale(1.10 0.85) translate(-223 -540) translate(0 -10)";
 const BACK_LOWER_IDS = ["glutes", "gluteus_medius", "hamstrings", "calves"];
 
 // For the female figure, the leader-line endpoint (anchorX/Y) of a lower-body
@@ -276,12 +275,12 @@ const BACK_LOWER_IDS = ["glutes", "gluteus_medius", "hamstrings", "calves"];
 function applyLowerTxFemale(anchor, axis, isFront) {
   // Mirror of the SVG transforms above: scale-Y about Y0, optional Y shift.
   if (isFront) {
-    // translate(0 550) scale(1.03 0.84) translate(0 -550) translate(0 -10)
-    if (axis === "x") return anchor * 1.03;
+    // translate(220 550) scale(1.12 0.84) translate(-220 -550) translate(0 -10)
+    if (axis === "x") return 220 + (anchor - 220) * 1.12;
     return 550 + (anchor - 550) * 0.84 - 10;
   }
-  // back: translate(0 540) scale(1.0 0.85) translate(0 -540) translate(0 -10)
-  if (axis === "x") return anchor;
+  // back: translate(223 540) scale(1.10 0.85) translate(-223 -540) translate(0 -10)
+  if (axis === "x") return 223 + (anchor - 223) * 1.10;
   return 540 + (anchor - 540) * 0.85 - 10;
 }
 
