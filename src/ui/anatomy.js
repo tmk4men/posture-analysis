@@ -182,21 +182,24 @@ const FRONT_QUAD_RIGHT_FEMALE = `M 350 680
 // Adductors fan out from the pubis (narrow at top) down the inner thigh
 // (wider at bottom). Female pelvis is slightly wider so the top sits a few
 // px further from the centerline.
+// Inner-edge bottom x kept just inside the leg's medial silhouette
+// (innerL=181/innerR=259 at y=820 male; innerL=189/innerR=251 female)
+// so the strip doesn't bleed into the inter-leg gap.
 const FRONT_ADDUCTOR_LEFT_MALE = `M 202 660
            L 217 660
-           L 188 820
+           L 178 820
            L 145 820 Z`;
 const FRONT_ADDUCTOR_RIGHT_MALE = `M 238 660
            L 223 660
-           L 252 820
+           L 262 820
            L 295 820 Z`;
 const FRONT_ADDUCTOR_LEFT_FEMALE = `M 200 660
            L 217 660
-           L 193 820
+           L 186 820
            L 150 820 Z`;
 const FRONT_ADDUCTOR_RIGHT_FEMALE = `M 240 660
            L 223 660
-           L 247 820
+           L 254 820
            L 290 820 Z`;
 
 const FRONT_MUSCLES_LOWER_MALE = `
@@ -242,18 +245,18 @@ const BACK_MUSCLES_UPPER = `
            C 244 277, 264 275, 282 275
            C 286 275, 290 275, 294 275 Z"/>
   <path id="m-lats"
-        d="M 118 360
-           C 96 450, 102 540, 145 600
+        d="M 122 360
+           C 122 450, 104 540, 96 600
            L 198 600
            L 198 365
-           C 178 362, 148 360, 128 360
-           C 122 360, 120 360, 118 360 Z
-           M 328 360
-           C 350 450, 344 540, 301 600
+           C 178 362, 148 360, 132 360
+           C 126 360, 124 360, 122 360 Z
+           M 324 360
+           C 324 450, 342 540, 350 600
            L 248 600
            L 248 365
-           C 268 362, 298 360, 318 360
-           C 324 360, 326 360, 328 360 Z"/>
+           C 268 362, 298 360, 314 360
+           C 320 360, 322 360, 324 360 Z"/>
   <path id="m-triceps"
         d="M 70 320
            C 60 405, 75 460, 105 470
