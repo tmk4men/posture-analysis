@@ -19,6 +19,9 @@ Thumbs.db
 svg候補プレビュー/
 .debug-anatomy/
 
+# Exercise image originals (local backup before whiteout-meyasu.py)
+assets/exercises/originals/
+
 # Node (if added later)
 node_modules/
 npm-debug.log*
