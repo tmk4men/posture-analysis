@@ -4,9 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260518-0800" />
+  <link rel="stylesheet" href="app.css?v=20260518-0831" />
 </head>
 <body>
+  <dialog id="auth-dialog" class="auth-dialog">
+    <form id="auth-form" method="dialog">
+      <h2>パスワードを入力してください</h2>
+      <div class="field">
+        <label for="auth-password">パスワード</label>
+        <input id="auth-password" type="password" autocomplete="current-password" required />
+      </div>
+      <label class="auth-remember">
+        <input id="auth-remember" type="checkbox" checked />
+        <span>この端末で記憶する</span>
+      </label>
+      <p id="auth-error" class="auth-error" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button type="submit" class="icon-btn icon-btn--primary">入る</button>
+      </div>
+    </form>
+  </dialog>
+
   <header class="app-header no-print">
     <a class="app-back" href="./">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
@@ -167,6 +185,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="src/main.js?v=20260518-0800"></script>
+  <script type="module" src="src/main.js?v=20260518-0831"></script>
 </body>
 </html>

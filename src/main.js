@@ -11,6 +11,7 @@ const [
   reportMod,
   geminiMod,
   recommendMod,
+  authMod,
 ] = await Promise.all([
   import("./pose/detector.js" + V),
   import("./pose/angles.js" + V),
@@ -19,6 +20,7 @@ const [
   import("./ui/report.js" + V),
   import("./ai/gemini.js" + V),
   import("./pose/recommend.js" + V),
+  import("./ui/auth.js" + V),
 ]);
 const { detectPose, warmup } = detectorMod;
 const { computeMetrics, summarizeAll } = anglesMod;
@@ -27,6 +29,7 @@ const { drawPoseOnCanvas, renderMetrics } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
 const { generateFindings, getDefaultModel } = geminiMod;
 const { PAIN_AREA_OPTIONS } = recommendMod;
+const { requireAuth } = authMod;
 
 const VIEWS = ["front", "right"];
 const SETTINGS_KEY = "posture_app_settings_v2";
@@ -314,7 +317,9 @@ function onResetPainAreas() {
     .forEach((el) => { el.checked = false; });
 }
 
-function init() {
+async function init() {
+  await requireAuth();
+
   document.getElementById("patient-date").valueAsDate = new Date();
   renderPainAreaChips();
 
