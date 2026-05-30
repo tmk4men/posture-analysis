@@ -8,7 +8,7 @@
 //   $ printf '%s' 'new-password' | sha256sum
 
 const APP_PASSWORD_HASH =
-  "e56d8357befe6040fe63ca6b1031938b6f772a5f5d93be6fc7bbf0d92b8252f5"; // sha256("tk1216")
+  "7291f4ae95ae77fdfd3074d9a7a7dbc05579e1c15622421547cb6cfa9d013c3d"; // sha256("seikotu")
 
 const AUTH_KEY = "posture_app_auth_v1";
 
