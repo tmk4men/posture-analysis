@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260530-1254" />
+  <link rel="stylesheet" href="app.css?v=20260713-1256" />
 </head>
 <body>
   <dialog id="auth-dialog" class="auth-dialog">
@@ -36,13 +36,6 @@
       <span class="brand-sub">Posture Analysis Studio</span>
     </div>
     <div class="header-actions">
-      <button id="settings-btn" class="icon-btn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span>設定</span>
-      </button>
       <button id="reset-btn" class="icon-btn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="3 6 5 6 21 6"/>
@@ -96,10 +89,6 @@
         <div id="pain-areas" class="chip-group"></div>
         <small>患者さんご自身が訴える部位を選ぶと、姿勢計測の結果に上乗せして人体図にハイライトされます。</small>
       </div>
-      <label class="consent">
-        <input id="consent-check" type="checkbox" />
-        <span>AIによる所見生成のため、撮影画像と計測値を外部AIに送信することを患者から同意取得済み</span>
-      </label>
     </section>
 
     <div class="carousel-dots no-print" id="carousel-dots" aria-hidden="true">
@@ -145,46 +134,6 @@
     </section>
   </main>
 
-  <dialog id="settings-dialog" class="settings-dialog">
-    <form method="dialog">
-      <h2>設定</h2>
-      <div class="field">
-        <label for="ai-mode">接続方法</label>
-        <select id="ai-mode">
-          <option value="proxy">プロキシ経由（推奨・APIキー不要）</option>
-          <option value="direct">直接呼び出し（自分のAPIキーを使う）</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="ai-provider">AIプロバイダー</label>
-        <select id="ai-provider">
-          <option value="gemini">Gemini (Google AI Studio)</option>
-          <option value="openai">OpenAI (ChatGPT API)</option>
-          <option value="anthropic">Anthropic (Claude API)</option>
-          <option value="none">使用しない（計測値のみ表示）</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="ai-model">モデル名（任意。空ならデフォルト）</label>
-        <input id="ai-model" type="text" placeholder="例: gemini-2.5-flash" />
-      </div>
-      <div class="field" id="proxy-url-field">
-        <label for="proxy-url">プロキシURL</label>
-        <input id="proxy-url" type="text" autocomplete="off" placeholder="https://posture-analysis-proxy.xxx.workers.dev" />
-        <small>運用者がCloudflare Workersに設定したURL。通常は変更不要です。</small>
-      </div>
-      <div class="field" id="api-key-field" hidden>
-        <label for="ai-key">APIキー（端末ローカル保存）</label>
-        <input id="ai-key" type="password" autocomplete="off" />
-        <small>ブラウザのlocalStorageに保存されます。共用端末では使用後にクリアしてください。</small>
-      </div>
-      <div class="dialog-actions">
-        <button value="cancel">キャンセル</button>
-        <button id="settings-save" value="save">保存</button>
-      </div>
-    </form>
-  </dialog>
-
-  <script type="module" src="src/main.js?v=20260530-1254"></script>
+  <script type="module" src="src/main.js?v=20260713-1256"></script>
 </body>
 </html>

@@ -9,7 +9,6 @@ const [
   uploadMod,
   overlayMod,
   reportMod,
-  geminiMod,
   recommendMod,
   authMod,
 ] = await Promise.all([
@@ -18,7 +17,6 @@ const [
   import("./ui/upload.js" + V),
   import("./ui/overlay.js" + V),
   import("./ui/report.js" + V),
-  import("./ai/gemini.js" + V),
   import("./pose/recommend.js" + V),
   import("./ui/auth.js" + V),
 ]);
@@ -27,50 +25,18 @@ const { computeMetrics, summarizeAll } = anglesMod;
 const { setupUpload, resetUpload } = uploadMod;
 const { drawPoseOnCanvas, renderMetrics } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
-const { generateFindings, getDefaultModel } = geminiMod;
-const { PAIN_AREA_OPTIONS } = recommendMod;
+const { PAIN_AREA_OPTIONS, deriveRecommendations } = recommendMod;
 const { requireAuth } = authMod;
 
 const VIEWS = ["front", "right"];
-const SETTINGS_KEY = "posture_app_settings_v2";
-
-// Hard-coded default proxy URL (Cloudflare Worker that holds the AI API key server-side).
-// Operators can override via the Settings dialog.
-const DEFAULT_PROXY_URL = "https://posture-analysis-proxy.tmk4men.workers.dev";
 
 const state = {
   metricsByView: { front: null, right: null },
 };
 
-function defaultSettings() {
-  return {
-    mode: "proxy",
-    provider: "gemini",
-    model: getDefaultModel("gemini"),
-    apiKey: "",
-    proxyUrl: DEFAULT_PROXY_URL,
-  };
-}
-
-function loadSettings() {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return defaultSettings();
-    const parsed = JSON.parse(raw);
-    return { ...defaultSettings(), ...parsed };
-  } catch {
-    return defaultSettings();
-  }
-}
-
-function saveSettings(settings) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-}
-
 function refreshAnalyzeButton() {
   const hasAny = VIEWS.some((v) => state.metricsByView[v] !== null);
-  const consent = document.getElementById("consent-check").checked;
-  document.getElementById("analyze-btn").disabled = !(hasAny && consent);
+  document.getElementById("analyze-btn").disabled = !hasAny;
   document.getElementById("print-btn").disabled = !hasAny;
 }
 
@@ -197,8 +163,7 @@ function collectWeeklyFrequency() {
   return Math.min(5, Math.max(1, n));
 }
 
-async function onAnalyze() {
-  const settings = loadSettings();
+function onAnalyze() {
   const patient = {
     name: document.getElementById("patient-name").value,
     date: document.getElementById("patient-date").value,
@@ -208,24 +173,18 @@ async function onAnalyze() {
   };
   const summary = summarizeAll(state.metricsByView);
 
-  if (settings.provider === "none") {
-    renderRawSummary("計測値の一覧（AIオフ・計測値のみ）:\n\n" + JSON.stringify(summary, null, 2));
-    setStatus("計測値のみ表示しました。");
-    return;
-  }
-
   setStatus("解析結果を生成中…");
   document.getElementById("analyze-btn").disabled = true;
   try {
-    const { findings, raw } = await generateFindings(settings, patient, summary);
-    if (findings) {
-      const photos = captureCanvasPhotos();
-      renderReport({ findings, patient, photos });
-      setStatus("解析結果を生成しました");
-    } else {
-      renderRawSummary(`AI出力をJSONとして解析できませんでした。生レスポンス:\n\n${raw}`);
-      setStatus("AI出力の解析に失敗（生レスポンスを表示）");
-    }
+    // 所見文・筋肉・種目・回数×セットをすべてルールベースで決定的に生成（AI不使用）。
+    const findings = deriveRecommendations(
+      summary,
+      patient.painAreas,
+      patient.weeklyFrequency,
+    );
+    const photos = captureCanvasPhotos();
+    renderReport({ findings, patient, photos });
+    setStatus("解析結果を生成しました");
   } catch (err) {
     console.error(err);
     renderRawSummary(`エラー: ${err.message}`);
@@ -247,55 +206,6 @@ function onReset() {
   refreshAnalyzeButton();
   updateCarouselDots();
   scrollToCard("front");
-}
-
-function setupSettingsDialog() {
-  const dialog = document.getElementById("settings-dialog");
-  const modeSel = document.getElementById("ai-mode");
-  const providerSel = document.getElementById("ai-provider");
-  const modelInput = document.getElementById("ai-model");
-  const keyInput = document.getElementById("ai-key");
-  const proxyInput = document.getElementById("proxy-url");
-  const proxyField = document.getElementById("proxy-url-field");
-  const apiKeyField = document.getElementById("api-key-field");
-  const saveBtn = document.getElementById("settings-save");
-
-  function applyModeVisibility() {
-    if (modeSel.value === "proxy") {
-      proxyField.hidden = false;
-      apiKeyField.hidden = true;
-    } else {
-      proxyField.hidden = true;
-      apiKeyField.hidden = false;
-    }
-  }
-
-  document.getElementById("settings-btn").addEventListener("click", () => {
-    const s = loadSettings();
-    modeSel.value = s.mode;
-    providerSel.value = s.provider;
-    modelInput.value = s.model;
-    keyInput.value = s.apiKey;
-    proxyInput.value = s.proxyUrl;
-    applyModeVisibility();
-    dialog.showModal();
-  });
-
-  modeSel.addEventListener("change", applyModeVisibility);
-
-  providerSel.addEventListener("change", () => {
-    modelInput.value = getDefaultModel(providerSel.value);
-  });
-
-  saveBtn.addEventListener("click", () => {
-    saveSettings({
-      mode: modeSel.value,
-      provider: providerSel.value,
-      model: modelInput.value.trim() || getDefaultModel(providerSel.value),
-      apiKey: keyInput.value.trim(),
-      proxyUrl: proxyInput.value.trim(),
-    });
-  });
 }
 
 function renderPainAreaChips() {
@@ -327,12 +237,10 @@ async function init() {
     setupUpload(view, handleImage);
   }
 
-  document.getElementById("consent-check").addEventListener("change", refreshAnalyzeButton);
   document.getElementById("analyze-btn").addEventListener("click", onAnalyze);
   document.getElementById("reset-btn").addEventListener("click", onReset);
   document.getElementById("print-btn").addEventListener("click", triggerPrint);
 
-  setupSettingsDialog();
   setupCarouselTracking();
 
   setStatus("MediaPipe モデルを読み込み中…");

@@ -4,12 +4,16 @@
 // noticeably different reports.
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod] = await Promise.all([
+const [musclesMod, assetsMod, thresholdsMod, diagnosisMod] = await Promise.all([
   import("../data/muscles.js" + V),
   import("../data/exerciseAssets.js" + V),
+  import("./thresholds.js" + V),
+  import("./diagnosis.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
 const { EXERCISE_ASSETS } = assetsMod;
+const { WARN, ENTRY_RATIO, getMetric } = thresholdsMod;
+const { buildDiagnosis } = diagnosisMod;
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
 // Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s
@@ -27,33 +31,16 @@ export function prescriptionForFrequency(weeklyFrequency) {
   return PRESCRIPTION_BY_FREQUENCY[n];
 }
 
-function getMetric(byView, view, key) {
-  const arr = byView?.[view];
-  if (!arr) return null;
-  return arr.find((m) => m.key === key) ?? null;
-}
-
 function signed(v) {
   const r = Math.round(v * 10) / 10;
   return (r >= 0 ? "+" : "") + r.toFixed(1);
 }
 
-// Clinical "warn" thresholds per metric. severity is computed as deviation /
-// threshold (so 1.0 = at the warn line, 2.0 = double).  We pick up issues from
-// half the threshold onward — small deviations still produce a personalised
-// pick, but with a low severity so they sort below stronger findings.
-const WARN = {
-  forward_head: 10,    // % of torso height
-  shoulder_forward: 8, // % of torso height
-  trunk_lean: 5,       // °
-  shoulder_tilt: 2,    // °
-  pelvic_tilt: 2,      // °
-  head_tilt: 3,        // °
-  lateral_shift: 5,    // % of shoulder width
-  knee_hyper: 2,       // ° beyond 178
-  knee_flex: 5,        // ° below 165
-};
-const ENTRY_RATIO = 0.5; // pick up issues from half the clinical threshold
+// 逸脱しきい値（WARN）とエントリ比（ENTRY_RATIO）は thresholds.js に集約。
+// diagnosis.js（所見文生成）と同じ値を共有する。severity は deviation /
+// threshold（1.0 = しきい値ちょうど、2.0 = 2倍）で算出し、しきい値の半分から
+// 拾い上げる（軽微な逸脱でも個別化された選定に反映し、低 severity として
+// 強い所見の下位にソートする）。
 
 // Each detected issue contributes weak/tight muscle ids with a severity score
 // (= magnitude / clinical threshold) and a note tied to the actual measured value.
@@ -436,20 +423,6 @@ function buildTrainingPlan(weakList, tightList, rng) {
   return plan.slice(0, 6);
 }
 
-// Compact summary string of detected issues — passed to the AI so the diagnosis
-// narrative stays coherent with the picked muscles, without letting the AI
-// override the selections.
-export function summarizeIssues(metricsByView) {
-  const issues = detectIssues(metricsByView);
-  if (!issues.length) return "顕著な逸脱は検出されず（典型的な現代姿勢パターンを想定）。";
-  const tags = [];
-  for (const issue of issues) {
-    for (const [, note] of issue.weak) tags.push(note);
-    for (const [, note] of issue.tight) tags.push(note);
-  }
-  return tags.join(" / ");
-}
-
 // 患者から申告された主訴部位（肩こり・腰痛・膝痛など）を、解剖学的に対応する
 // 筋肉ハイライトに変換する。型分類は使わず、入力された部位ごとに該当筋肉を
 // 個別に severity = 1.0（= 臨床閾値相当）で重ねる。これにより、姿勢計測値が
@@ -589,10 +562,14 @@ export function deriveRecommendations(metricsByView, painAreas = [], weeklyFrequ
   // 表示用に severity を落とす（report.js は {id, note} だけ参照）
   const stripSeverity = (m) => ({ id: m.id, note: m.note });
 
+  const freq = Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
+
   return {
+    // 所見文もルールベースで生成（旧：外部AI）。同じ計測値・部位・頻度なら常に同文。
+    diagnosis: buildDiagnosis(metricsByView, painAreas, freq),
     weakMuscles: weakMuscles.map(stripSeverity),
     tightMuscles: tightMuscles.map(stripSeverity),
     trainingPlan,
-    weeklyFrequency: Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2)),
+    weeklyFrequency: freq,
   };
 }

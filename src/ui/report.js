@@ -1,5 +1,6 @@
 // Renders the 2-page A4 posture report.
-// findings shape (after AI sanitisation in src/ai/gemini.js):
+// findings shape (built deterministically in src/pose/recommend.js →
+// deriveRecommendations; the diagnosis text comes from src/pose/diagnosis.js):
 // {
 //   diagnosis: string,
 //   weakMuscles:  [ { id, note } ],
