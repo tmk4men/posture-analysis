@@ -7,7 +7,7 @@
   <meta name="format-detection" content="telephone=no" />
 
   <title>Postura ── 姿勢を、数字で診る。｜整骨院向け姿勢分析ツール</title>
-  <meta name="description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から所見出力まで3分。整骨院・整体院のためのブラウザ完結の姿勢分析ツールです。" />
+  <meta name="description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から結果表示まで3分。整骨院・整体院のためのブラウザ完結の姿勢分析ツールです。" />
 
   <link rel="canonical" href="https://tmk4men.github.io/posture-analysis/" />
 
@@ -15,7 +15,7 @@
   <meta property="og:locale" content="ja_JP" />
   <meta property="og:site_name" content="Postura" />
   <meta property="og:title" content="Postura ── 姿勢を、数字で診る。" />
-  <meta property="og:description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から所見出力まで3分。整骨院のための姿勢分析ツール。" />
+  <meta property="og:description" content="写真4枚で、肩・骨盤・頭部の傾きを自動で計測。撮影から結果表示まで3分。整骨院のための姿勢分析ツール。" />
   <meta property="og:url" content="https://tmk4men.github.io/posture-analysis/" />
   <meta property="og:image" content="https://tmk4men.github.io/posture-analysis/og.png" />
   <meta property="og:image:width" content="1200" />
@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap" />
 
-  <link rel="stylesheet" href="lp.css?v=20260713-1256" />
+  <link rel="stylesheet" href="lp.css?v=20260713-1526" />
 
   <script type="application/ld+json">
   {
@@ -42,7 +42,7 @@
     "name": "Postura",
     "applicationCategory": "HealthApplication",
     "operatingSystem": "Web",
-    "description": "整骨院・整体院向けの姿勢分析Webアプリ。写真4枚から骨格を自動検出し、左右差や前後傾を数値化、所見コメントを自動生成します。",
+    "description": "整骨院・整体院向けの姿勢分析Webアプリ。写真4枚から骨格を自動検出し、左右差や前後傾を数値化、姿勢の特徴コメントを自動生成します。",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
     "url": "https://tmk4men.github.io/posture-analysis/"
   }
@@ -80,7 +80,7 @@
           </h1>
           <p class="hero-lead reveal" data-delay="380">
             写真4枚で、肩・骨盤・頭部の傾きを自動計測。<br />
-            撮影から所見出力まで、およそ3分。
+            撮影から結果表示まで、およそ3分。
           </p>
           <div class="hero-ctas reveal" data-delay="500">
             <a class="btn btn-primary" href="./app.html">
@@ -91,7 +91,7 @@
           </div>
           <ul class="hero-meta reveal" data-delay="640">
             <li><span class="meta-num">4</span><span class="meta-lbl">方向同時計測</span></li>
-            <li><span class="meta-num">3<span class="meta-unit">分</span></span><span class="meta-lbl">撮影〜所見</span></li>
+            <li><span class="meta-num">3<span class="meta-unit">分</span></span><span class="meta-lbl">撮影〜結果</span></li>
             <li><span class="meta-num">100<span class="meta-unit">%</span></span><span class="meta-lbl">端末内で処理</span></li>
           </ul>
         </div>
@@ -219,15 +219,15 @@
             <div class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 36 36" width="36" height="36"><path d="M8 8 H24 L28 12 V28 H8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="24" x2="20" y2="24" stroke="currentColor" stroke-width="1.2"/></svg>
             </div>
-            <h3>所見コメントの下書き</h3>
-            <p>計測値・不調部位・トレーニング頻度をもとに、所見と改善の見通しの下書きを自動で組み立て。<em>叩き台として</em>使い、施術者がその場で言葉を整えてください。</p>
+            <h3>姿勢コメントの下書き</h3>
+            <p>計測値・気になる部位・トレーニング頻度をもとに、姿勢の特徴とこれからの見通しの下書きを自動で組み立て。<em>叩き台として</em>使い、施術者がその場で言葉を整えてください。</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">
               <svg viewBox="0 0 36 36" width="36" height="36"><rect x="7" y="6" width="22" height="24" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="12" x2="25" y2="12" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="1.2"/><line x1="11" y1="20" x2="21" y2="20" stroke="currentColor" stroke-width="1.2"/><circle cx="13" cy="25" r="1.4" fill="currentColor"/><line x1="17" y1="25" x2="25" y2="25" stroke="currentColor" stroke-width="1.2"/></svg>
             </div>
             <h3>A4レポート印刷</h3>
-            <p>4方向の写真と所見をそのまま A4 で印刷。患者さんがその場で持ち帰れる紙の説明資料が、ボタンひとつで出ます。</p>
+            <p>4方向の写真と結果をそのまま A4 で印刷。患者さんがその場で持ち帰れる紙の説明資料が、ボタンひとつで出ます。</p>
           </article>
         </div>
       </div>
@@ -259,7 +259,7 @@
           <li class="flow-step">
             <span class="flow-num">03</span>
             <h3 class="flow-h">渡す</h3>
-            <p>所見を確認して、必要なら一言添えてA4に印刷。患者さんの手元に、その日の状態を持ち帰っていただけます。</p>
+            <p>結果を確認して、必要なら一言添えてA4に印刷。患者さんの手元に、その日の状態を持ち帰っていただけます。</p>
             <div class="flow-illust" aria-hidden="true">
               <svg viewBox="0 0 200 120"><rect x="30" y="20" width="60" height="80" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="38" y1="34" x2="82" y2="34" stroke="currentColor" stroke-width="0.8"/><line x1="38" y1="44" x2="82" y2="44" stroke="currentColor" stroke-width="0.8"/><line x1="38" y1="54" x2="68" y2="54" stroke="currentColor" stroke-width="0.8"/><rect x="40" y="64" width="40" height="28" fill="none" stroke="currentColor" stroke-width="0.8"/><path d="M110 60 L150 60" stroke="currentColor" stroke-width="1.2"/><polyline points="144,55 150,60 144,65" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="170" cy="60" r="20" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M162 60 L168 66 L178 54" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
@@ -315,8 +315,8 @@
               <p>骨格検出はブラウザ内で完結。サーバーには一度も送信されません。</p>
             </li>
             <li>
-              <span class="privacy-tag">所見生成</span>
-              <p>所見コメントは<em>端末内のルール</em>で生成。外部AIも使わず、どこにも送信しません。</p>
+              <span class="privacy-tag">コメント生成</span>
+              <p>姿勢コメントは<em>端末内のルール</em>で生成。外部AIも使わず、どこにも送信しません。</p>
             </li>
             <li>
               <span class="privacy-tag">患者情報</span>
@@ -363,13 +363,13 @@
         <span>Postura</span>
       </div>
       <p class="footer-note">
-        本ツールは医療機器ではなく、計測値・所見コメントは医学的診断ではありません。
+        本ツールは医療機器ではなく、計測値・姿勢コメントは医学的診断ではありません。
         施術判断は必ず有資格者が行ってください。
       </p>
       <p class="footer-meta">© 2026 Postura ── 整骨院・整体院向けの姿勢分析ツール</p>
     </div>
   </footer>
 
-  <script src="lp.js?v=20260713-1256" defer></script>
+  <script src="lp.js?v=20260713-1526" defer></script>
 </body>
 </html>

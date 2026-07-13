@@ -22,6 +22,10 @@ const { painAreaLabels, prescriptionForFrequency } = recommendMod;
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
+// 患者配布物としての免責。両ページのフッターに常時表示し、医学的診断でないことを明示する。
+const DISCLAIMER =
+  "このレポートはカメラ計測にもとづく姿勢の傾向を示す健康サポート情報であり、医学的な診断ではありません。気になる症状がある場合は医療機関にご相談ください。";
+
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -153,6 +157,10 @@ export function renderReport({ findings, patient, photos }) {
           <ul>${findings.tightMuscles.map((m) => muscleCardHtml(m, "tight")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
         </div>
       </section>
+
+      <footer class="report-foot report-foot--disclaimer">
+        <small>${DISCLAIMER}</small>
+      </footer>
     </article>
   `;
 
@@ -168,8 +176,8 @@ export function renderReport({ findings, patient, photos }) {
     <article class="report-page report-page--2">
       <header class="report-head report-head--green">
         <div class="report-head__brand">POSTURA <span>Training Plan</span></div>
-        <h1 class="report-head__title">姿勢改善 ${escapeHtml(freqLabel)}プログラム</h1>
-        <p class="report-head__lead">姿勢分析の結果に基づく個別トレーニングメニュー</p>
+        <h1 class="report-head__title">姿勢ケア ${escapeHtml(freqLabel)}プログラム</h1>
+        <p class="report-head__lead">姿勢チェックの結果に合わせた個別トレーニングメニュー</p>
       </header>
 
       <ul class="training-grid">
@@ -178,6 +186,7 @@ export function renderReport({ findings, patient, photos }) {
 
       <footer class="report-foot">
         <small>※ ${escapeHtml(freqLabel)}、無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
+        <small class="report-foot__disclaimer">${DISCLAIMER}</small>
       </footer>
     </article>
   `;

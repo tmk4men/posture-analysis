@@ -176,6 +176,20 @@ button {
   margin: 0 auto;
 }
 
+/* 常時表示の注意書き：本ツールが医学的診断ではないことを画面上でも明示する。 */
+.app-disclaimer {
+  max-width: 1400px;
+  margin: 0 auto 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--warn-bg);
+  border: 1px solid #e7cfa0;
+  border-left: 3px solid var(--warn);
+  border-radius: 8px;
+  color: #7a5310;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
 /* ---------- Patient info ---------- */
 .patient-info {
   background: var(--card);
@@ -860,6 +874,16 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   border-top: 1px dashed #d6cfbf;
   color: #8a7858;
   font-size: 8.5pt;
+}
+.report-foot small { display: block; }
+.report-foot__disclaimer {
+  margin-top: 0.3rem;
+  color: #6b6259;
+  line-height: 1.45;
+}
+/* Page 1 disclaimer footer sits at the very bottom of the sheet. */
+.report-foot--disclaimer {
+  color: #6b6259;
 }
 
 /* ===== Page 2 layout (training plan) ===== */
