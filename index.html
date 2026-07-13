@@ -42,7 +42,7 @@
     "name": "Postura",
     "applicationCategory": "HealthApplication",
     "operatingSystem": "Web",
-    "description": "整骨院・整体院向けの姿勢分析Webアプリ。写真4枚から骨格を自動検出し、左右差や前後傾を数値化、AI所見コメントを生成します。",
+    "description": "整骨院・整体院向けの姿勢分析Webアプリ。写真4枚から骨格を自動検出し、左右差や前後傾を数値化、所見コメントを自動生成します。",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
     "url": "https://tmk4men.github.io/posture-analysis/"
   }
@@ -220,7 +220,7 @@
               <svg viewBox="0 0 36 36" width="36" height="36"><path d="M8 8 H24 L28 12 V28 H8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="20" x2="24" y2="20" stroke="currentColor" stroke-width="1.2"/><line x1="12" y1="24" x2="20" y2="24" stroke="currentColor" stroke-width="1.2"/></svg>
             </div>
             <h3>所見コメントの下書き</h3>
-            <p>計測値だけを AI に渡して、所見・身体への影響・セルフケア提案の下書きを生成。<em>叩き台として</em>使い、施術者がその場で言葉を整えてください。</p>
+            <p>計測値・不調部位・トレーニング頻度をもとに、所見と改善の見通しの下書きを自動で組み立て。<em>叩き台として</em>使い、施術者がその場で言葉を整えてください。</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">
@@ -316,15 +316,15 @@
             </li>
             <li>
               <span class="privacy-tag">所見生成</span>
-              <p>AIには<em>計測値の数値だけ</em>を渡します。画像も氏名も送りません。</p>
+              <p>所見コメントは<em>端末内のルール</em>で生成。外部AIも使わず、どこにも送信しません。</p>
             </li>
             <li>
-              <span class="privacy-tag">同意取得</span>
-              <p>所見生成を使う場合は、患者さんからの同意取得チェックを必須にしています。</p>
+              <span class="privacy-tag">患者情報</span>
+              <p>氏名・撮影日・不調部位などの入力も<em>端末内のみ</em>で保持。サーバには残りません。</p>
             </li>
             <li>
-              <span class="privacy-tag">APIキー</span>
-              <p>運用側のキーはサーバー側で秘匿。各院・各端末でのキー入力は不要です。</p>
+              <span class="privacy-tag">APIキー不要</span>
+              <p>外部AIを使わないため、APIキーの登録も利用料も一切かかりません。</p>
             </li>
           </ul>
           <div class="privacy-figure" aria-hidden="true">
