@@ -14,7 +14,8 @@ Thumbs.db
 
 # App Store Connect API credentials (絶対にコミットしない)
 *.p8
-scripts/asc/.asc.json
+.asc.json
+scripts/asc/node_modules/
 scripts/asc/sales-*.tsv
 
 # Local debug / scratch

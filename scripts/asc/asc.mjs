@@ -21,6 +21,7 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -28,31 +29,100 @@ import { gunzipSync } from "node:zlib";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASE = "https://api.appstoreconnect.apple.com";
 
-// ---------- 認証 ----------
+// ---------- 認証（複数アプリ／複数アカウントで使い回せる設計） ----------
+//
+// APIキーは Apple アカウント（チーム）単位。同じチームの全アプリは1つの鍵で操作できる。
+// 別チーム（別Apple ID）を使うときだけ profiles を分ける。
+//
+// 設定の探索順（先に見つかった有効なものを使用）:
+//   1. 環境変数 ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH（--profile 指定が無いとき）
+//   2. ./.asc.json               （実行中のプロジェクト固有）
+//   3. <このスクリプトと同じ場所>/.asc.json
+//   4. ~/.asc/config.json        （全プロジェクト共通のグローバル設定）
+//
+// .asc.json / config.json はどちらの形でも可:
+//   単一:    { "keyId": "...", "issuerId": "...", "keyPath": "AuthKey_XXX.p8" }
+//   複数:    { "default": "postura",
+//             "profiles": { "postura": {..}, "otherapp": {..} } }
+//   keyPath は設定ファイルからの相対 or 絶対。
 
-function loadConfig() {
-  const env = {
-    keyId: process.env.ASC_KEY_ID,
-    issuerId: process.env.ASC_ISSUER_ID,
-    keyPath: process.env.ASC_KEY_PATH,
-  };
-  if (env.keyId && env.issuerId && env.keyPath) {
-    return { ...env, keyPath: path.resolve(env.keyPath) };
+function configCandidates() {
+  return [
+    path.join(process.cwd(), ".asc.json"),
+    path.join(HERE, ".asc.json"),
+    path.join(os.homedir(), ".asc", "config.json"),
+    path.join(os.homedir(), ".asc.json"),
+  ];
+}
+
+function pickFromFile(obj, fileDir, profileName) {
+  let creds;
+  if (obj && obj.profiles) {
+    const name = profileName || obj.default || Object.keys(obj.profiles)[0];
+    creds = obj.profiles[name];
+    if (!creds) return null;
+  } else {
+    creds = obj;
   }
-  const cfgPath = path.join(HERE, ".asc.json");
-  if (fs.existsSync(cfgPath)) {
-    const c = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
-    if (!c.keyId || !c.issuerId || !c.keyPath) {
-      throw new Error(".asc.json に keyId / issuerId / keyPath が必要です。");
+  if (!creds || !creds.keyId || !creds.issuerId || !creds.keyPath) return null;
+  const keyPath = path.isAbsolute(creds.keyPath)
+    ? creds.keyPath
+    : path.resolve(fileDir, creds.keyPath);
+  return { keyId: creds.keyId, issuerId: creds.issuerId, keyPath };
+}
+
+function loadConfig(profileName) {
+  // プロファイル未指定で環境変数が揃っていれば最優先。
+  if (
+    !profileName &&
+    process.env.ASC_KEY_ID &&
+    process.env.ASC_ISSUER_ID &&
+    process.env.ASC_KEY_PATH
+  ) {
+    return {
+      keyId: process.env.ASC_KEY_ID,
+      issuerId: process.env.ASC_ISSUER_ID,
+      keyPath: path.resolve(process.env.ASC_KEY_PATH),
+    };
+  }
+  for (const file of configCandidates()) {
+    if (!fs.existsSync(file)) continue;
+    let obj;
+    try {
+      obj = JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch (e) {
+      throw new Error(`設定の読み込みに失敗: ${file}\n${e.message}`);
     }
-    // keyPath は .asc.json からの相対でも絶対でも可。
-    const kp = path.isAbsolute(c.keyPath) ? c.keyPath : path.join(HERE, c.keyPath);
-    return { keyId: c.keyId, issuerId: c.issuerId, keyPath: kp };
+    const cfg = pickFromFile(obj, path.dirname(file), profileName);
+    if (cfg) return cfg;
   }
   throw new Error(
-    "認証情報が未設定です。環境変数(ASC_KEY_ID/ASC_ISSUER_ID/ASC_KEY_PATH) か " +
-      "scripts/asc/.asc.json を設定してください（README参照）。",
+    profileName
+      ? `プロファイル "${profileName}" が見つかりません（~/.asc/config.json などを確認）。`
+      : "認証情報が未設定です。~/.asc/config.json か ./.asc.json か環境変数を設定してください（README参照）。",
   );
+}
+
+// 設定ファイルに定義されたプロファイル一覧を集める（profiles コマンド用）。
+function listProfiles() {
+  const found = [];
+  for (const file of configCandidates()) {
+    if (!fs.existsSync(file)) continue;
+    let obj;
+    try {
+      obj = JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {
+      continue;
+    }
+    if (obj.profiles) {
+      for (const name of Object.keys(obj.profiles)) {
+        found.push(`${name}${obj.default === name ? " (default)" : ""}\t${file}`);
+      }
+    } else if (obj.keyId) {
+      found.push(`(single)\t${file}`);
+    }
+  }
+  return found;
 }
 
 function b64url(input) {
@@ -233,29 +303,60 @@ const commands = {
     console.log(`保存: ${out}\n---\n${tsv.split("\n").slice(0, 5).join("\n")}`);
   },
 
+  async profiles() {
+    const rows = listProfiles();
+    if (!rows.length) {
+      console.log(
+        "プロファイル未設定です。~/.asc/config.json か ./.asc.json を作成してください（README参照）。",
+      );
+      return;
+    }
+    console.log("name\tsource");
+    printRows(rows);
+  },
+
   async help() {
     console.log(HELP);
   },
 };
 
-const HELP = `App Store Connect API CLI
+const HELP = `App Store Connect API CLI  ( asc <command> [--profile <name>] )
 
-  node scripts/asc/asc.mjs token
-  node scripts/asc/asc.mjs apps
-  node scripts/asc/asc.mjs builds <appId>
-  node scripts/asc/asc.mjs iaps <appId>
-  node scripts/asc/asc.mjs subgroups <appId>
-  node scripts/asc/asc.mjs subs <subscriptionGroupId>
-  node scripts/asc/asc.mjs get <path> [key=value ...]
-  node scripts/asc/asc.mjs sales <vendorNumber>
+  asc apps                       アプリ一覧（appId確認）
+  asc iaps <appId>               App内課金一覧
+  asc subgroups <appId>          サブスクグループ一覧
+  asc subs <subscriptionGroupId> グループ内サブスク一覧
+  asc builds <appId>             ビルド一覧
+  asc get <path> [key=value ...] 任意GET（例: asc get /v1/apps limit=5）
+  asc sales <vendorNumber>       売上サマリー(前日)
+  asc token                      JWT出力（curl等のデバッグ用）
+  asc profiles                   設定済みプロファイル一覧
 
-認証: 環境変数(ASC_KEY_ID/ASC_ISSUER_ID/ASC_KEY_PATH) か scripts/asc/.asc.json
+グローバル導入すると "asc apps" で呼べる（未導入なら "node scripts/asc/asc.mjs apps"）。
+  cd scripts/asc && npm link
+
+認証（使い回し）:
+  ~/.asc/config.json を1つ用意すれば、どのプロジェクトからでも使える。
+  複数Appleアカウントは profiles を分け、--profile <name> で切替。
+  詳細は scripts/asc/README.md
 `;
 
 // ---------- エントリ ----------
 
+const NO_AUTH = new Set(["help", "profiles"]);
+
 async function main() {
-  const [cmd, ...args] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  // --profile / -p をどこにあっても抽出（残りをコマンド＋引数とする）。
+  let profileName = process.env.ASC_PROFILE || null;
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--profile" || a === "-p") profileName = argv[++i];
+    else if (a.startsWith("--profile=")) profileName = a.slice("--profile=".length);
+    else rest.push(a);
+  }
+  const [cmd, ...args] = rest;
   if (!cmd || cmd === "help" || cmd === "-h" || cmd === "--help") {
     console.log(HELP);
     return;
@@ -266,8 +367,7 @@ async function main() {
     console.log(HELP);
     process.exit(1);
   }
-  // token/apps 等は cfg を第1引数に、以降にCLI引数を渡す。
-  const cfg = cmd === "help" ? null : loadConfig();
+  const cfg = NO_AUTH.has(cmd) ? null : loadConfig(profileName);
   await fn(cfg, ...args);
 }
 

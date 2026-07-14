@@ -1,0 +1,13 @@
+{
+  "name": "asc-cli",
+  "version": "1.0.0",
+  "description": "Zero-dependency App Store Connect API CLI (reusable across apps/accounts)",
+  "type": "module",
+  "bin": {
+    "asc": "./asc.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
