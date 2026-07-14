@@ -22,8 +22,17 @@ scripts/asc/sales-*.tsv
 画像/
 参考画像/
 素材画像/
+トレーニング/
 svg候補プレビュー/
 .debug-anatomy/
+
+# Capacitor iOS wrap artifacts (Macのクローンで生成される。Webリポジトリには入れない)
+/www/
+/ios/
+/android/
+/package.json
+/package-lock.json
+/capacitor.config.*
 
 # Exercise image originals (local backup before whiteout-meyasu.py)
 assets/exercises/originals/
