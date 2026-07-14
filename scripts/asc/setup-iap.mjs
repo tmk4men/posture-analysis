@@ -201,7 +201,7 @@ async function main() {
         await api("POST", "/v1/subscriptionPrices", {
           data: {
             type: "subscriptionPrices",
-            attributes: { startDate: null },
+            attributes: {},
             relationships: {
               subscription: { data: { type: "subscriptions", id: sub.id } },
               subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: point.id } },
@@ -254,22 +254,25 @@ async function main() {
 
   if (!iap.dryRun) {
     console.log("■ 買い切り表示名（ja）");
-    await ensure(
-      `IAP localization ja`,
-      async () => {
-        const r = await api("GET", `/v1/inAppPurchases/${iap.id}/inAppPurchaseLocalizations?limit=50`);
-        return (r.data || []).find((l) => l.attributes.locale === PLAN.locale);
-      },
-      {
+    // GET の関係パスが弾かれるので、直接POSTして重複はエラーで判定する。
+    try {
+      await api("POST", "/v1/inAppPurchaseLocalizations", {
         data: {
           type: "inAppPurchaseLocalizations",
           attributes: { locale: PLAN.locale, name: PLAN.lifetime.locName, description: PLAN.lifetime.locDesc },
           relationships: { inAppPurchaseV2: { data: { type: "inAppPurchases", id: iap.id } } },
         },
-      },
-      "/v1/inAppPurchaseLocalizations",
-    );
-    console.log("  ※ 買い切りの価格設定は価格ポイント確認が要るため、次段で対応します。");
+      });
+      console.log("  ✅ 作成: IAP localization ja");
+    } catch (e) {
+      const m = (e.message || "").toString();
+      if (/already|duplicate|409/i.test(m)) console.log("  ✓ 既存: IAP localization ja");
+      else {
+        warnings.push("買い切りの表示名(ja)（画面で設定）");
+        console.log("  ⚠ 表示名で停止: " + m.split("\n").slice(-1)[0]);
+      }
+    }
+    console.log("  ※ 買い切りの価格設定は次段で対応します。");
   }
 
   if (warnings.length) {
