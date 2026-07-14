@@ -63,4 +63,52 @@ asc apps --profile clientB     # アカウント切替
 - `.p8` と `.asc.json` / `config.json` は **絶対にコミットしない**（リポジトリ側は `.gitignore` 済み。
   `~/.asc/` はそもそもリポジトリ外）。
 - JWT は20分で失効し、実行のたびに生成される。
-- 書き込み系（課金作成・審査提出・メタ更新）は次段で追加予定。まず読み取りで疎通確認を。
+## 書き込み系（作成・更新・削除）
+
+**安全策：書き込みは既定でドライラン**（送信内容を表示するだけ）。実際に送るときだけ `--yes`。
+
+```bash
+asc post <path> <body.json|-|'{...}'>    # 作成
+asc patch <path> <body.json|-|'{...}'>   # 更新
+asc delete <path>                         # 削除
+asc whatsnew <appId> ja "軽微な改善。"     # 新機能テキスト更新（ガイド付き）
+```
+
+- ボディは「ファイルパス」「`-`(標準入力)」「その場のJSON文字列」のいずれでも可。
+- まず `--yes` 無しで実行 → 送信内容を確認 → 問題なければ `--yes` を付けて再実行。
+- Windowsの **Git Bash** はパス自動変換で `/v1/...` が化けることがある。**PowerShell推奨**、
+  または Git Bash なら `MSYS_NO_PATHCONV=1 asc get /v1/apps` のように無効化する。
+
+### レシピ①：買い切り（非消耗）課金を作る
+```bash
+# 1) 課金を作成（productId は逆ドメインで一意に）
+asc post /v2/inAppPurchases '{"data":{"type":"inAppPurchases",
+  "attributes":{"name":"永久解除","productId":"com.you.app.lifetime","inAppPurchaseType":"NON_CONSUMABLE"},
+  "relationships":{"app":{"data":{"type":"apps","id":"<appId>"}}}}}' --yes
+# 2) 日本語ローカライズ
+asc post /v1/inAppPurchaseLocalizations '{"data":{"type":"inAppPurchaseLocalizations",
+  "attributes":{"locale":"ja","name":"永久解除","description":"全機能を無制限に利用できます。"},
+  "relationships":{"inAppPurchaseV2":{"data":{"type":"inAppPurchases","id":"<iapId>"}}}}}' --yes
+# 3) 価格ポイントを調べる → 価格スケジュール作成
+asc get /v2/inAppPurchases/<iapId>/pricePoints filter[territory]=JPN limit=200
+asc post /v1/inAppPurchasePriceSchedules '{ ... 上で選んだ pricePoint を参照 ... }' --yes
+# 4) 審査に提出
+asc post /v1/inAppPurchaseSubmissions '{"data":{"type":"inAppPurchaseSubmissions",
+  "relationships":{"inAppPurchaseV2":{"data":{"type":"inAppPurchases","id":"<iapId>"}}}}}' --yes
+```
+
+### レシピ②：自動更新サブスク＋無料トライアル
+```bash
+# 1) グループ（無ければ）
+asc post /v1/subscriptionGroups '{"data":{"type":"subscriptionGroups",
+  "attributes":{"referenceName":"Main"},"relationships":{"app":{"data":{"type":"apps","id":"<appId>"}}}}}' --yes
+# 2) サブスク本体（月額）
+asc post /v1/subscriptions '{"data":{"type":"subscriptions",
+  "attributes":{"name":"月額プラン","productId":"com.you.app.monthly","subscriptionPeriod":"ONE_MONTH","groupLevel":1},
+  "relationships":{"group":{"data":{"type":"subscriptionGroups","id":"<groupId>"}}}}}' --yes
+# 3) ローカライズ / 価格（pricePoint取得→ /v1/subscriptionPrices）/ 4) 無料トライアル
+asc post /v1/subscriptionIntroductoryOffers '{ ...FREE_TRIAL, 期間 ... }' --yes
+```
+
+> 価格まわり（pricePoint）はアプリ・地域ごとにIDが変わるため、必ず `get` で調べてから投入する。
+> どのレシピも **まず `--yes` 無しでドライラン**して本文を確認するのが安全。

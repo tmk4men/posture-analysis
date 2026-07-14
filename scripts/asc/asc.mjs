@@ -29,6 +29,9 @@ import { gunzipSync } from "node:zlib";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASE = "https://api.appstoreconnect.apple.com";
 
+// 書き込みは既定でドライラン。--yes / --execute を付けたときだけ実際に送信する。
+let EXECUTE = false;
+
 // ---------- 認証（複数アプリ／複数アカウントで使い回せる設計） ----------
 //
 // APIキーは Apple アカウント（チーム）単位。同じチームの全アプリは1つの鍵で操作できる。
@@ -193,6 +196,43 @@ function printRows(rows) {
   for (const r of rows) console.log(r);
 }
 
+function requireArg(val, usage) {
+  if (val === undefined || val === null || val === "") {
+    throw new Error(`使い方: ${usage}`);
+  }
+}
+
+// 書き込みボディの解釈: '-'=標準入力 / 既存ファイルパス / それ以外はJSON文字列。
+function readBodyArg(arg) {
+  if (arg === undefined) return null;
+  let raw;
+  if (arg === "-") raw = fs.readFileSync(0, "utf8");
+  else if (fs.existsSync(arg)) raw = fs.readFileSync(arg, "utf8");
+  else raw = arg;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`ボディのJSON解析に失敗: ${e.message}`);
+  }
+}
+
+function describeRequest(method, endpoint, body) {
+  const url = endpoint.startsWith("http") ? endpoint : BASE + endpoint;
+  return `${method} ${url}\n${body ? JSON.stringify(body, null, 2) : "(body なし)"}`;
+}
+
+// 書き込みの共通実行。既定はドライラン（送信せず内容表示）。--yes で実送信。
+async function runWrite(method, endpoint, body, cfg) {
+  if (!EXECUTE) {
+    console.log("[DRY-RUN] 送信しません。実行するには --yes を付けてください。\n");
+    console.log(describeRequest(method, endpoint, body));
+    return;
+  }
+  const token = makeToken(cfg);
+  const res = await api(method, endpoint, { token, body });
+  console.log(res ? JSON.stringify(res, null, 2) : "(204 No Content)");
+}
+
 // ---------- コマンド ----------
 
 const commands = {
@@ -303,6 +343,95 @@ const commands = {
     console.log(`保存: ${out}\n---\n${tsv.split("\n").slice(0, 5).join("\n")}`);
   },
 
+  // ---- 書き込み系（既定ドライラン。--yes で実送信） ----
+
+  async post(cfg, endpoint, bodyArg) {
+    requireArg(endpoint, "post <path> <body.json|-|'{...}'> [--yes]");
+    await runWrite("POST", endpoint, readBodyArg(bodyArg), cfg);
+  },
+
+  async patch(cfg, endpoint, bodyArg) {
+    requireArg(endpoint, "patch <path> <body.json|-|'{...}'> [--yes]");
+    await runWrite("PATCH", endpoint, readBodyArg(bodyArg), cfg);
+  },
+
+  async delete(cfg, endpoint) {
+    requireArg(endpoint, "delete <path> [--yes]");
+    await runWrite("DELETE", endpoint, null, cfg);
+  },
+
+  async versions(cfg, appId) {
+    requireArg(appId, "versions <appId>");
+    const token = makeToken(cfg);
+    const data = await api("GET", `/v1/apps/${appId}/appStoreVersions`, {
+      token,
+      query: { limit: "20" },
+    });
+    printRows(
+      (data.data || []).map((v) => {
+        const at = v.attributes || {};
+        return `${v.id}\t${at.versionString}\t${at.appStoreState}\t${at.platform}`;
+      }),
+    );
+  },
+
+  // 編集可能なバージョンの「新機能(What's New)」を指定ロケールで更新する（ガイド付き）。
+  // 例: asc whatsnew 12345 ja "軽微な改善とバグ修正。" --yes
+  async whatsnew(cfg, appId, locale, text) {
+    requireArg(appId, 'whatsnew <appId> <locale> "<text>" [--yes]');
+    requireArg(locale, 'whatsnew <appId> <locale> "<text>" [--yes]');
+    requireArg(text, 'whatsnew <appId> <locale> "<text>" [--yes]');
+    const token = makeToken(cfg);
+    // 編集可能な状態のバージョンを探す。
+    const editable = new Set([
+      "PREPARE_FOR_SUBMISSION",
+      "DEVELOPER_REJECTED",
+      "REJECTED",
+      "METADATA_REJECTED",
+      "WAITING_FOR_REVIEW",
+      "INVALID_BINARY",
+    ]);
+    const vers = await api("GET", `/v1/apps/${appId}/appStoreVersions`, {
+      token,
+      query: { limit: "20" },
+    });
+    const ver = (vers.data || []).find((v) =>
+      editable.has((v.attributes || {}).appStoreState),
+    );
+    if (!ver) {
+      throw new Error(
+        "編集可能なバージョンが見つかりません（審査中でない準備中のバージョンが必要）。",
+      );
+    }
+    // 該当ロケールのローカライズを探す。
+    const locs = await api(
+      "GET",
+      `/v1/appStoreVersions/${ver.id}/appStoreVersionLocalizations`,
+      { token, query: { limit: "50" } },
+    );
+    const loc = (locs.data || []).find(
+      (l) => (l.attributes || {}).locale === locale,
+    );
+    if (!loc) {
+      throw new Error(
+        `ロケール ${locale} のローカライズがありません。先に App Store Connect で追加してください。`,
+      );
+    }
+    console.log(`対象: version ${ver.attributes.versionString} / locale ${locale} / loc ${loc.id}`);
+    await runWrite(
+      "PATCH",
+      `/v1/appStoreVersionLocalizations/${loc.id}`,
+      {
+        data: {
+          type: "appStoreVersionLocalizations",
+          id: loc.id,
+          attributes: { whatsNew: text },
+        },
+      },
+      cfg,
+    );
+  },
+
   async profiles() {
     const rows = listProfiles();
     if (!rows.length) {
@@ -327,10 +456,17 @@ const HELP = `App Store Connect API CLI  ( asc <command> [--profile <name>] )
   asc subgroups <appId>          サブスクグループ一覧
   asc subs <subscriptionGroupId> グループ内サブスク一覧
   asc builds <appId>             ビルド一覧
+  asc versions <appId>           App Storeバージョン一覧（状態確認）
   asc get <path> [key=value ...] 任意GET（例: asc get /v1/apps limit=5）
   asc sales <vendorNumber>       売上サマリー(前日)
   asc token                      JWT出力（curl等のデバッグ用）
   asc profiles                   設定済みプロファイル一覧
+
+  --- 書き込み系（既定ドライラン。実送信は --yes を付ける）---
+  asc post <path> <body.json|-|'{...}'>   作成（例: 課金・価格・提出）
+  asc patch <path> <body.json|-|'{...}'>  更新
+  asc delete <path>                        削除
+  asc whatsnew <appId> <locale> "<text>"   新機能テキストを更新（ガイド付き）
 
 グローバル導入すると "asc apps" で呼べる（未導入なら "node scripts/asc/asc.mjs apps"）。
   cd scripts/asc && npm link
@@ -354,6 +490,7 @@ async function main() {
     const a = argv[i];
     if (a === "--profile" || a === "-p") profileName = argv[++i];
     else if (a.startsWith("--profile=")) profileName = a.slice("--profile=".length);
+    else if (a === "--yes" || a === "--execute" || a === "-y") EXECUTE = true;
     else rest.push(a);
   }
   const [cmd, ...args] = rest;
