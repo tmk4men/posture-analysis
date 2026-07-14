@@ -272,7 +272,50 @@ async function main() {
         console.log("  ⚠ 表示名で停止: " + m.split("\n").slice(-1)[0]);
       }
     }
-    console.log("  ※ 買い切りの価格設定は次段で対応します。");
+    // 買い切りの価格（価格スケジュール）
+    try {
+      console.log("■ 買い切り価格");
+      const pp = await api(
+        "GET",
+        `/v2/inAppPurchases/${iap.id}/pricePoints?filter[territory]=${PLAN.territory}&limit=200`,
+      );
+      const point = pickClosest(pp.data, PLAN.lifetime.targetYen);
+      if (!point) throw new Error("買い切りの価格ポイントが取得できません");
+      console.log(`  対象価格ポイント: ¥${point.attributes.customerPrice}`);
+      if (!EXECUTE) console.log("  ＋価格設定予定");
+      else {
+        await api("POST", "/v1/inAppPurchasePriceSchedules", {
+          data: {
+            type: "inAppPurchasePriceSchedules",
+            relationships: {
+              inAppPurchase: { data: { type: "inAppPurchases", id: iap.id } },
+              manualPrices: { data: [{ type: "inAppPurchasePrices", id: "${price}" }] },
+              baseTerritory: { data: { type: "territories", id: PLAN.territory } },
+            },
+          },
+          included: [
+            {
+              type: "inAppPurchasePrices",
+              id: "${price}",
+              attributes: { startDate: null },
+              relationships: {
+                inAppPurchasePricePoint: {
+                  data: { type: "inAppPurchasePricePoints", id: point.id },
+                },
+              },
+            },
+          ],
+        });
+        console.log("  ✅ 買い切り価格設定");
+      }
+    } catch (e) {
+      const m = (e.message || "").toString();
+      if (/already|exist/i.test(m)) console.log("  ✓ 既に価格設定あり");
+      else {
+        warnings.push("買い切りの価格（画面で¥2,500を設定）");
+        console.log("  ⚠ 買い切り価格で停止: " + m.split("\n").slice(-1)[0]);
+      }
+    }
   }
 
   if (warnings.length) {
