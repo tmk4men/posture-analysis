@@ -14,6 +14,9 @@ import path from "node:path";
 
 // ============ ここを編集すれば掲載文を変えられる ============
 const LOCALE = "ja";
+const PRIVACY_URL = "https://tmk4men.github.io/posture-analysis/privacy.html";
+const TERMS_URL = "https://tmk4men.github.io/posture-analysis/terms.html";
+const SUPPORT_URL = "https://tmk4men.github.io/posture-analysis/";
 const COPY = {
   subtitle: "写真で姿勢を数値化・記録", // 30字以内
   promotionalText:
@@ -21,6 +24,8 @@ const COPY = {
   keywords:
     "姿勢,姿勢分析,姿勢チェック,猫背,反り腰,骨格,ストレッチ,トレーニング,整体,整骨院,ボディメイク,肩こり", // 100字以内
   whatsNew: "初回リリースです。写真から姿勢を数値化し、姿勢ケアのトレーニングを提案します。ご意見をお待ちしています。",
+  supportUrl: SUPPORT_URL,
+  marketingUrl: SUPPORT_URL,
   description: `POSTURAは、写真から姿勢の傾向を数値で見える化するアプリです。
 
 ■ 特長
@@ -38,9 +43,12 @@ const COPY = {
 写真や計測結果はすべて端末内で処理され、外部サーバーへ送信しません。
 
 ■ 料金
-基本機能は無料。月額プラン、または買い切りで、レポートの無制限作成やトレーニングの全機能が使えます。
+基本機能は無料。月額プラン、または買い切りで、レポートの無制限作成やトレーニングの全機能が使えます。買い切りは、本アプリが提供される期間中、追加課金なしで対象機能をご利用いただけます。
 
-※本アプリはカメラ計測にもとづく姿勢の傾向の目安を表示するもので、医学的な診断ではありません。気になる症状がある場合は医療機関にご相談ください。`,
+※本アプリはカメラ計測にもとづく姿勢の傾向の目安を表示するもので、医学的な診断ではありません。気になる症状がある場合は医療機関にご相談ください。
+
+利用規約：${TERMS_URL}
+プライバシーポリシー：${PRIVACY_URL}`,
 };
 // =========================================================
 
@@ -113,6 +121,8 @@ async function main() {
         description: COPY.description,
         keywords: COPY.keywords,
         promotionalText: COPY.promotionalText,
+        supportUrl: COPY.supportUrl,
+        marketingUrl: COPY.marketingUrl,
       });
       // whatsNew は初回バージョン(1.0)では編集不可（アップデート時のみ）。失敗しても止めない。
       try {
