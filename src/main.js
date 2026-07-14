@@ -11,6 +11,7 @@ const [
   reportMod,
   recommendMod,
   authMod,
+  paywallMod,
 ] = await Promise.all([
   import("./pose/detector.js" + V),
   import("./pose/angles.js" + V),
@@ -19,6 +20,7 @@ const [
   import("./ui/report.js" + V),
   import("./pose/recommend.js" + V),
   import("./ui/auth.js" + V),
+  import("./ui/paywall.js" + V),
 ]);
 const { detectPose, warmup } = detectorMod;
 const { computeMetrics, summarizeAll } = anglesMod;
@@ -27,6 +29,16 @@ const { drawPoseOnCanvas, renderMetrics } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
 const { PAIN_AREA_OPTIONS, deriveRecommendations } = recommendMod;
 const { requireAuth } = authMod;
+const {
+  canGenerateReport,
+  recordReport,
+  remainingReports,
+  applyTrainingLock,
+  applyWatermark,
+  renderLimitReached,
+  initEntitlementBridge,
+  isPro,
+} = paywallMod;
 
 const VIEWS = ["front", "right"];
 
@@ -163,7 +175,22 @@ function collectWeeklyFrequency() {
   return Math.min(5, Math.max(1, n));
 }
 
+function freePlanStatusSuffix() {
+  if (isPro()) return "";
+  return `（無料プラン：今月あと ${remainingReports()} 件）`;
+}
+
 function onAnalyze() {
+  const output = document.getElementById("summary-output");
+
+  // 無料プランの月間上限に達していたら、レポートを生成せずアップグレード画面を表示。
+  if (!canGenerateReport()) {
+    renderLimitReached(output);
+    setStatus("無料プランの上限に達しました");
+    document.getElementById("print-btn").disabled = true;
+    return;
+  }
+
   const patient = {
     name: document.getElementById("patient-name").value,
     date: document.getElementById("patient-date").value,
@@ -184,7 +211,11 @@ function onAnalyze() {
     );
     const photos = captureCanvasPhotos();
     renderReport({ findings, patient, photos });
-    setStatus("解析結果を生成しました");
+    // 生成が成功したら1件としてカウントし、無料なら透かし＋トレーニング面ロック。
+    recordReport();
+    applyWatermark(output);
+    applyTrainingLock(output);
+    setStatus(`解析結果を生成しました${freePlanStatusSuffix()}`);
   } catch (err) {
     console.error(err);
     renderRawSummary(`エラー: ${err.message}`);
@@ -229,6 +260,10 @@ function onResetPainAreas() {
 
 async function init() {
   await requireAuth();
+
+  // ネイティブ（iOS/Apple課金）からの購入確定を受け取る経路を用意。
+  // 購入のタイムラグで結果が遅れて届いても、後から確実に解除できるようにする。
+  initEntitlementBridge();
 
   document.getElementById("patient-date").valueAsDate = new Date();
   renderPainAreaChips();

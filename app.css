@@ -965,6 +965,79 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
 
 .training-card--empty { grid-column: 1 / -1; padding: 1.2rem; text-align: center; color: var(--muted); }
 
+/* ===== Freemium paywall (無料プランのゲート) ===== */
+/* 無料プランのレポートに斜めの透かしを敷き詰める（画面・印刷とも）。 */
+.report-page { position: relative; }
+.report-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='330'%20height='230'%3E%3Ctext%20x='12'%20y='140'%20transform='rotate(-28%20165%20115)'%20font-family='sans-serif'%20font-size='30'%20font-weight='700'%20fill='%230f3a3a'%20fill-opacity='0.09'%3E無料版%20POSTURA%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  /* 印刷時も透かしを残す（配布物の抑止が目的）。 */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+/* 2枚目（トレーニング）をブラーで隠し、CTAを重ねる。 */
+.report-page--2.is-locked { position: relative; }
+/* タイトル（見出し）はシャープに残し「ここに個別メニューがある」と伝える。
+   隠すのは中身のトレーニンググリッドのみ。 */
+.report-page--2.is-locked .training-grid {
+  filter: blur(10px);
+  pointer-events: none;
+  user-select: none;
+}
+.paywall-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(246, 248, 250, 0.35);
+  z-index: 2;
+}
+.limit-reached {
+  display: flex;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+}
+.paywall-cta {
+  max-width: 340px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 1.8rem 1.5rem;
+  box-shadow: 0 10px 40px rgba(15, 30, 45, 0.18);
+}
+.paywall-cta__title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f3a3a;
+  margin-bottom: 0.55rem;
+}
+.paywall-cta__sub {
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0 0 1.25rem;
+}
+.upgrade-btn {
+  display: inline-block;
+  background: linear-gradient(180deg, #1d6e6a 0%, #0f3a3a 100%);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 11px;
+  box-shadow: var(--shadow-sm);
+  transition: filter 0.15s ease, transform 0.08s ease;
+}
+.upgrade-btn:hover { filter: brightness(1.08); }
+.upgrade-btn:active { transform: translateY(1px); }
+
 /* ===== Print rules ===== */
 @page {
   size: A4 portrait;
