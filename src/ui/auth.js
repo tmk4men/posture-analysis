@@ -69,9 +69,15 @@ export function clearAuth() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
+// パスワードゲートは無効化：Web版もアプリ版とまったく同じく、誰でもそのまま開ける。
+// 再有効化する場合は、この return を消して promptForPassword() を呼ぶように戻す。
 export function requireAuth() {
+  return Promise.resolve();
+}
+
+// 旧パスワードゲート（現在は未使用。復活用に残置）。
+function promptForPassword() {
   return new Promise((resolve) => {
-    // iOSアプリ内ならパスワードを出さずに通す。Web（ブラウザ）は従来どおり要求。
     if (isNativeApp() || isAuthed()) {
       resolve();
       return;
