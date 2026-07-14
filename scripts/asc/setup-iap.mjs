@@ -24,7 +24,7 @@ const PLAN = {
     productId: "com.tomoki.postura.monthly",
     name: "月額プラン",
     period: "ONE_MONTH",
-    targetYen: 600, // 近い価格ポイントを自動選択
+    targetYen: 800, // 近い価格ポイントを自動選択
     trialDuration: "ONE_WEEK", // 無料トライアル期間
     locName: "POSTURA 月額プラン",
     locDesc: "全機能を無制限に利用できます。",
@@ -32,7 +32,7 @@ const PLAN = {
   lifetime: {
     productId: "com.tomoki.postura.lifetime",
     name: "買い切りプラン",
-    targetYen: 3000,
+    targetYen: 2500,
     locName: "POSTURA 買い切り",
     locDesc: "一度の購入で全機能を永続的に解除します。",
   },
