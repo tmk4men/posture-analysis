@@ -108,13 +108,19 @@ async function main() {
     const locs = await api("GET", `/v1/appStoreVersions/${ver.id}/appStoreVersionLocalizations?limit=50`);
     const loc = (locs.data || []).find((l) => l.attributes.locale === LOCALE);
     if (!loc) console.log(`  ⚠ ${LOCALE} のローカライズがありません（画面で日本語を追加してから）`);
-    else
+    else {
       await patch(`version localization ${LOCALE}`, `/v1/appStoreVersionLocalizations/${loc.id}`, "appStoreVersionLocalizations", loc.id, {
         description: COPY.description,
         keywords: COPY.keywords,
         promotionalText: COPY.promotionalText,
-        whatsNew: COPY.whatsNew,
       });
+      // whatsNew は初回バージョン(1.0)では編集不可（アップデート時のみ）。失敗しても止めない。
+      try {
+        await patch(`whatsNew ${LOCALE}`, `/v1/appStoreVersionLocalizations/${loc.id}`, "appStoreVersionLocalizations", loc.id, { whatsNew: COPY.whatsNew });
+      } catch {
+        console.log("  ⚠ 新機能(whatsNew)は初回リリースでは設定不可のためスキップ");
+      }
+    }
   }
 
   // 2) アプリ情報のサブタイトル
