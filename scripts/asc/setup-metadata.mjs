@@ -14,8 +14,10 @@ import path from "node:path";
 
 // ============ ここを編集すれば掲載文を変えられる ============
 const LOCALE = "ja";
-// 他アプリで使い回すときは、この BASE_URL だけ差し替える（各URLは自動生成）。
+// ▼ 他アプリで使い回すときに触るのはこの3つ＋下の COPY だけ。
+//   1) 実行時の引数 <appId>   2) BASE_URL（法務ページの配信元）  3) CONTACT_EMAIL（審査連絡先）
 const BASE_URL = "https://tmk4men.github.io/posture-analysis";
+const CONTACT_EMAIL = "tomokiskriiiabc@gmail.com"; // 全アプリ共通で使える
 const PRIVACY_URL = `${BASE_URL}/privacy.html`;
 const TERMS_URL = `${BASE_URL}/terms.html`;
 const SUPPORT_URL = `${BASE_URL}/support.html`;
@@ -206,7 +208,7 @@ async function main() {
         await api("POST", `/v1/appStoreReviewDetails`, {
           data: {
             type: "appStoreReviewDetails",
-            attributes: { notes: COPY.reviewNotes, demoAccountRequired: false, contactEmail: "tomokiskriiiabc@gmail.com" },
+            attributes: { notes: COPY.reviewNotes, demoAccountRequired: false, contactEmail: CONTACT_EMAIL },
             relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: ver.id } } },
           },
         });
