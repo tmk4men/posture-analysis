@@ -28,6 +28,18 @@ const COPY = {
   whatsNew: "初回リリースです。写真から姿勢を数値化し、姿勢ケアのトレーニングを提案します。ご意見をお待ちしています。",
   supportUrl: SUPPORT_URL,
   marketingUrl: SUPPORT_URL,
+  reviewNotes: `Postura estimates posture tendencies from photos (general wellness app, NOT a medical device / not a medical diagnosis).
+
+HOW TO TEST
+- The app opens directly to the tool. No login or account is required.
+- Upload a front-view photo and a right-side photo of a standing person (any full-body photo works), then tap "解析結果" (Analyze) to see the posture report.
+
+IN-APP PURCHASES
+- Free tier shows a limited number of reports and blurs the training-plan page.
+- Tapping "有料版にアップグレード" (Upgrade) starts a monthly subscription or a one-time purchase. Please test with a Sandbox account. After purchase, the blur/watermark are removed. Restore is supported.
+
+PRIVACY
+- All photo processing is on-device. No user data is collected or transmitted.`,
   description: `POSTURAは、写真から姿勢の傾向を数値で見える化するアプリです。
 
 ■ 特長
@@ -174,6 +186,35 @@ async function main() {
       console.log("  ✅ カテゴリ: ヘルスケア/フィットネス");
     } catch (e) {
       console.log("  ⚠ カテゴリ設定失敗（画面で設定）: " + (e.message || "").split("\n").slice(-1)[0]);
+    }
+  }
+
+  // 4) 審査メモ（App Review Information の Notes）＋ ログイン不要フラグ
+  console.log("■ 審査メモ（App Review Notes）");
+  if (!ver) console.log("  ⚠ バージョンが見つかりません");
+  else if (!EXECUTE) console.log("  ＋審査メモ設定予定（ログイン不要も明記）");
+  else {
+    try {
+      const rd = await api("GET", `/v1/appStoreVersions/${ver.id}/appStoreReviewDetail`).catch(() => null);
+      const detailId = rd && rd.data && rd.data.id;
+      if (detailId) {
+        await api("PATCH", `/v1/appStoreReviewDetails/${detailId}`, {
+          data: { type: "appStoreReviewDetails", id: detailId, attributes: { notes: COPY.reviewNotes, demoAccountRequired: false } },
+        });
+        console.log("  ✅ 審査メモ更新");
+      } else {
+        await api("POST", `/v1/appStoreReviewDetails`, {
+          data: {
+            type: "appStoreReviewDetails",
+            attributes: { notes: COPY.reviewNotes, demoAccountRequired: false, contactEmail: "tomokiskriiiabc@gmail.com" },
+            relationships: { appStoreVersion: { data: { type: "appStoreVersions", id: ver.id } } },
+          },
+        });
+        console.log("  ✅ 審査メモ作成");
+      }
+    } catch (e) {
+      console.log("  ⚠ 審査メモ設定失敗（画面: App Review Information → Notes）: " + (e.message || "").split("\n").slice(-1)[0]);
+      console.log("    連絡先の氏名/電話は画面で入力が必要な場合あり。");
     }
   }
 
