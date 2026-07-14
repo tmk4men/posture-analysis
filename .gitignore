@@ -12,6 +12,11 @@ Thumbs.db
 .env
 .env.local
 
+# App Store Connect API credentials (絶対にコミットしない)
+*.p8
+scripts/asc/.asc.json
+scripts/asc/sales-*.tsv
+
 # Local debug / scratch
 画像/
 参考画像/
