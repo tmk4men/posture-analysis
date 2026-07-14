@@ -12,6 +12,7 @@ const [
   recommendMod,
   authMod,
   paywallMod,
+  iapMod,
 ] = await Promise.all([
   import("./pose/detector.js" + V),
   import("./pose/angles.js" + V),
@@ -21,6 +22,7 @@ const [
   import("./pose/recommend.js" + V),
   import("./ui/auth.js" + V),
   import("./ui/paywall.js" + V),
+  import("./ui/iap.js" + V),
 ]);
 const { detectPose, warmup } = detectorMod;
 const { computeMetrics, summarizeAll } = anglesMod;
@@ -39,6 +41,7 @@ const {
   initEntitlementBridge,
   isPro,
 } = paywallMod;
+const { initIap } = iapMod;
 
 const VIEWS = ["front", "right"];
 
@@ -264,6 +267,9 @@ async function init() {
   // ネイティブ（iOS/Apple課金）からの購入確定を受け取る経路を用意。
   // 購入のタイムラグで結果が遅れて届いても、後から確実に解除できるようにする。
   initEntitlementBridge();
+
+  // iOSアプリ内なら RevenueCat を初期化（購入・復元・権利同期）。ブラウザでは何もしない。
+  initIap();
 
   document.getElementById("patient-date").valueAsDate = new Date();
   renderPainAreaChips();

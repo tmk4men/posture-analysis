@@ -172,4 +172,16 @@ export function renderLimitReached(container) {
 // オーナーが自端末で解除・動作確認するためのフック（本番でも無害）。
 if (typeof window !== "undefined") {
   window.__posturaSetPro = setPro;
+
+  // アップグレードボタンの共通ハンドラ。
+  // iOSアプリ内では window.__posturaUpgrade（RevenueCat購入）を実行し、
+  // ブラウザではCTAの href（UPGRADE_URL）にそのまま従う。
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest && e.target.closest(".upgrade-btn");
+    if (!btn) return;
+    if (typeof window.__posturaUpgrade === "function") {
+      e.preventDefault();
+      window.__posturaUpgrade();
+    }
+  });
 }
