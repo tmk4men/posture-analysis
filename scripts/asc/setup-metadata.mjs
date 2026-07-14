@@ -14,9 +14,11 @@ import path from "node:path";
 
 // ============ ここを編集すれば掲載文を変えられる ============
 const LOCALE = "ja";
-const PRIVACY_URL = "https://tmk4men.github.io/posture-analysis/privacy.html";
-const TERMS_URL = "https://tmk4men.github.io/posture-analysis/terms.html";
-const SUPPORT_URL = "https://tmk4men.github.io/posture-analysis/";
+// 他アプリで使い回すときは、この BASE_URL だけ差し替える（各URLは自動生成）。
+const BASE_URL = "https://tmk4men.github.io/posture-analysis";
+const PRIVACY_URL = `${BASE_URL}/privacy.html`;
+const TERMS_URL = `${BASE_URL}/terms.html`;
+const SUPPORT_URL = `${BASE_URL}/support.html`;
 const COPY = {
   subtitle: "写真で姿勢を数値化・記録", // 30字以内
   promotionalText:
@@ -142,7 +144,18 @@ async function main() {
     const ilocs = await api("GET", `/v1/appInfos/${info.id}/appInfoLocalizations?limit=50`);
     const iloc = (ilocs.data || []).find((l) => l.attributes.locale === LOCALE);
     if (!iloc) console.log(`  ⚠ ${LOCALE} のアプリ情報ローカライズがありません`);
-    else await patch(`appInfo localization ${LOCALE}`, `/v1/appInfoLocalizations/${iloc.id}`, "appInfoLocalizations", iloc.id, { subtitle: COPY.subtitle });
+    else {
+      try {
+        await patch(`appInfo localization ${LOCALE}`, `/v1/appInfoLocalizations/${iloc.id}`, "appInfoLocalizations", iloc.id, {
+          subtitle: COPY.subtitle,
+          privacyPolicyUrl: PRIVACY_URL,
+        });
+      } catch {
+        // privacyPolicyUrl がこのAPIで弾かれる場合はサブタイトルのみ設定し、URLは画面で。
+        console.log("  ⚠ privacyPolicyUrl込みが失敗 → subtitleのみ設定（プライバシーURLは画面で貼付）");
+        await patch(`appInfo localization ${LOCALE} (subtitle)`, `/v1/appInfoLocalizations/${iloc.id}`, "appInfoLocalizations", iloc.id, { subtitle: COPY.subtitle });
+      }
+    }
   }
 
   // 3) カテゴリ（ヘルスケア/フィットネス）
