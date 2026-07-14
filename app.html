@@ -4,7 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POSTURA Studio｜姿勢分析</title>
-  <link rel="stylesheet" href="app.css?v=20260713-1526" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f3a3a" />
+  <link rel="icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="POSTURA" />
+
+  <link rel="stylesheet" href="app.css?v=20260714-0948" />
 </head>
 <body>
   <dialog id="auth-dialog" class="auth-dialog">
@@ -135,6 +146,14 @@
     </section>
   </main>
 
-  <script type="module" src="src/main.js?v=20260713-1526"></script>
+  <script type="module" src="src/main.js?v=20260714-0948"></script>
+  <script>
+    // PWA: サービスワーカー登録（オフライン起動・モデルキャッシュ）
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
