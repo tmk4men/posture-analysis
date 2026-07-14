@@ -135,6 +135,25 @@ async function main() {
     else await patch(`appInfo localization ${LOCALE}`, `/v1/appInfoLocalizations/${iloc.id}`, "appInfoLocalizations", iloc.id, { subtitle: COPY.subtitle });
   }
 
+  // 3) カテゴリ（ヘルスケア/フィットネス）
+  console.log("■ カテゴリ");
+  if (!info) console.log("  ⚠ appInfo が見つかりません");
+  else if (!EXECUTE) console.log("  ＋設定予定: ヘルスケア/フィットネス");
+  else {
+    try {
+      await api("PATCH", `/v1/appInfos/${info.id}`, {
+        data: {
+          type: "appInfos",
+          id: info.id,
+          relationships: { primaryCategory: { data: { type: "appCategories", id: "HEALTH_AND_FITNESS" } } },
+        },
+      });
+      console.log("  ✅ カテゴリ: ヘルスケア/フィットネス");
+    } catch (e) {
+      console.log("  ⚠ カテゴリ設定失敗（画面で設定）: " + (e.message || "").split("\n").slice(-1)[0]);
+    }
+  }
+
   console.log(`\n${EXECUTE ? "完了。App Store Connect の画面で反映を確認してください。" : "ドライラン完了。問題なければ --yes で反映してください。"}`);
 }
 
