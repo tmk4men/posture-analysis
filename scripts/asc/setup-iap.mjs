@@ -119,6 +119,7 @@ async function main() {
     process.exit(1);
   }
   console.log(`アプリ ${appId} の課金セットアップ ${EXECUTE ? "【実行】" : "【ドライラン：作成しません】"}\n`);
+  const warnings = [];
 
   // ===== 1. サブスクグループ =====
   console.log("■ サブスクグループ");
@@ -182,15 +183,17 @@ async function main() {
       "/v1/subscriptionLocalizations",
     );
 
-    // ===== 4. 価格（日本・目標額に最も近い価格ポイント） =====
-    console.log("■ サブスク価格");
-    const pp = await api(
-      "GET",
-      `/v1/subscriptions/${sub.id}/pricePoints?filter[territory]=${PLAN.territory}&limit=200`,
-    );
-    const point = pickClosest(pp.data, PLAN.subscription.targetYen);
-    if (point) {
+    // ===== 4-5. 価格＆無料トライアル（失敗しても止めずに続行） =====
+    try {
+      console.log("■ サブスク価格");
+      const pp = await api(
+        "GET",
+        `/v1/subscriptions/${sub.id}/pricePoints?filter[territory]=${PLAN.territory}&limit=200`,
+      );
+      const point = pickClosest(pp.data, PLAN.subscription.targetYen);
+      if (!point) throw new Error("価格ポイントが取得できませんでした");
       console.log(`  対象価格ポイント: ¥${point.attributes.customerPrice} (${point.id})`);
+
       const hasPrice = (await api("GET", `/v1/subscriptions/${sub.id}/prices?limit=1`)).data?.length;
       if (hasPrice) console.log("  ✓ 既に価格設定あり");
       else if (!EXECUTE) console.log("  ＋価格設定予定");
@@ -198,7 +201,7 @@ async function main() {
         await api("POST", "/v1/subscriptionPrices", {
           data: {
             type: "subscriptionPrices",
-            attributes: { preserveCurrentPrice: false },
+            attributes: { startDate: null },
             relationships: {
               subscription: { data: { type: "subscriptions", id: sub.id } },
               subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: point.id } },
@@ -208,7 +211,6 @@ async function main() {
         console.log("  ✅ 価格設定");
       }
 
-      // ===== 5. 無料トライアル =====
       console.log("■ 無料トライアル");
       const offers = await api("GET", `/v1/subscriptions/${sub.id}/introductoryOffers?limit=10`);
       if (offers.data?.length) console.log("  ✓ 既にトライアルあり");
@@ -220,14 +222,15 @@ async function main() {
             attributes: { duration: PLAN.subscription.trialDuration, offerMode: "FREE_TRIAL", numberOfPeriods: 1 },
             relationships: {
               subscription: { data: { type: "subscriptions", id: sub.id } },
-              subscriptionPricePoint: { data: { type: "subscriptionPricePoints", id: point.id } },
             },
           },
         });
         console.log("  ✅ 無料トライアル作成");
       }
-    } else {
-      console.log("  ⚠ 価格ポイントが取得できませんでした（後で手動設定）");
+    } catch (e) {
+      warnings.push("サブスクの価格/トライアル（App Store Connect の画面で¥800とトライアル1週間を設定）");
+      console.log("  ⚠ 価格/トライアルで停止: " + (e.message || e).split("\n").slice(-1)[0]);
+      console.log("    → 構造は出来ています。価格だけ後で画面設定でもOK（数十秒）。続行します…");
     }
   }
 
@@ -269,6 +272,10 @@ async function main() {
     console.log("  ※ 買い切りの価格設定は価格ポイント確認が要るため、次段で対応します。");
   }
 
+  if (warnings.length) {
+    console.log("\n― 画面で仕上げが必要な項目 ―");
+    warnings.forEach((w) => console.log("  ・" + w));
+  }
   console.log(`\n${EXECUTE ? "完了。" : "ドライラン完了。問題なければ --yes を付けて再実行してください。"}`);
 }
 
