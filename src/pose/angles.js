@@ -1,3 +1,13 @@
+// 骨格点 → 計測値の純粋な幾何計算。
+//
+// severity（レポートの warn/ok バッジ）のカットオフは thresholds.js を参照する。
+// 以前はここに同じ数値をベタ書きしていたため、thresholds.js を変えても
+// バッジだけ古い値のまま取り残される状態だった（バッジは赤いのに所見文には
+// 出てこない、等）。数値を増やすときは必ず thresholds.js 側に足すこと。
+
+const V = new URL(import.meta.url).search;
+const { WARN, KNEE } = await import("./thresholds.js" + V);
+
 // MediaPipe Pose 33 landmark indices (subset we use)
 export const LM = {
   NOSE: 0,
@@ -59,7 +69,7 @@ export function computeMetrics(landmarks, view) {
       value: shoulderTiltAdjusted,
       unit: "°",
       hint: shoulderTiltAdjusted > 0 ? "右肩が下がり" : "左肩が下がり",
-      severity: classify(shoulderTiltAdjusted, 2),
+      severity: classify(shoulderTiltAdjusted, WARN.shoulder_tilt),
     });
 
     // Pelvic tilt
@@ -73,7 +83,7 @@ export function computeMetrics(landmarks, view) {
       value: pelvicTiltAdjusted,
       unit: "°",
       hint: pelvicTiltAdjusted > 0 ? "右骨盤が下がり" : "左骨盤が下がり",
-      severity: classify(pelvicTiltAdjusted, 2),
+      severity: classify(pelvicTiltAdjusted, WARN.pelvic_tilt),
     });
 
     // Head tilt (ear line)
@@ -87,7 +97,7 @@ export function computeMetrics(landmarks, view) {
       value: headTiltAdjusted,
       unit: "°",
       hint: headTiltAdjusted > 0 ? "右側へ傾斜" : "左側へ傾斜",
-      severity: classify(headTiltAdjusted, 3),
+      severity: classify(headTiltAdjusted, WARN.head_tilt),
     });
 
     // Lateral shift: midshoulder vs midhip horizontal offset (normalized to shoulder width)
@@ -102,7 +112,7 @@ export function computeMetrics(landmarks, view) {
       value: shiftAdjusted,
       unit: "% (肩幅比)",
       hint: shiftAdjusted > 0 ? "右へシフト" : "左へシフト",
-      severity: classify(shiftAdjusted, 5),
+      severity: classify(shiftAdjusted, WARN.lateral_shift),
     });
   }
 
@@ -128,7 +138,7 @@ export function computeMetrics(landmarks, view) {
       value: fhpRatio,
       unit: "% (体幹高比)",
       hint: fhpRatio > 0 ? "頭が前方" : "頭が後方",
-      severity: classify(fhpRatio, 10),
+      severity: classify(fhpRatio, WARN.forward_head),
     });
 
     // Shoulder forward posture: horizontal offset of shoulder from hip vertical line.
@@ -139,7 +149,7 @@ export function computeMetrics(landmarks, view) {
       value: shoulderForward,
       unit: "% (体幹高比)",
       hint: shoulderForward > 0 ? "肩が前方 (巻き肩傾向)" : "肩が後方",
-      severity: classify(shoulderForward, 8),
+      severity: classify(shoulderForward, WARN.shoulder_forward),
     });
 
     // Pelvic tilt (sagittal): angle of hip→shoulder line vs vertical.
@@ -151,7 +161,7 @@ export function computeMetrics(landmarks, view) {
       value: trunkAdjusted,
       unit: "°",
       hint: trunkAdjusted > 0 ? "前傾" : "後傾",
-      severity: classify(trunkAdjusted, 5),
+      severity: classify(trunkAdjusted, WARN.trunk_lean),
     });
 
     // Knee angle (hip-knee-ankle). 180° = fully extended, <180 flexed, >180 hyperextended.
@@ -162,12 +172,15 @@ export function computeMetrics(landmarks, view) {
       value: kneeAngle,
       unit: "°",
       hint:
-        kneeAngle >= 178
+        kneeAngle >= KNEE.hyper
           ? "過伸展傾向"
-          : kneeAngle >= 170
+          : // 170 は表示用の内訳バンドのみ。warn/ok の判定には使わないので
+            // KNEE.flex（165）との間（165〜170）は「屈曲位」と出るが ok 扱い。
+            kneeAngle >= 170
             ? "正常範囲"
             : "屈曲位",
-      severity: kneeAngle >= 178 || kneeAngle < 165 ? "warn" : "ok",
+      severity:
+        kneeAngle >= KNEE.hyper || kneeAngle < KNEE.flex ? "warn" : "ok",
     });
   }
 

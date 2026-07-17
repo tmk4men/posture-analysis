@@ -12,7 +12,7 @@ const [musclesMod, assetsMod, thresholdsMod, diagnosisMod] = await Promise.all([
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
 const { EXERCISE_ASSETS } = assetsMod;
-const { WARN, ENTRY_RATIO, getMetric } = thresholdsMod;
+const { WARN, KNEE, ENTRY_RATIO, getMetric } = thresholdsMod;
 const { buildDiagnosis } = diagnosisMod;
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
@@ -114,8 +114,8 @@ function detectIssues(byView) {
 
     const kn = getMetric(byView, sideView, "knee_angle");
     if (kn) {
-      if (kn.value >= 178) {
-        const sev = (kn.value - 178) / WARN.knee_hyper + 1; // ≥1 once hyperextended
+      if (kn.value >= KNEE.hyper) {
+        const sev = (kn.value - KNEE.hyper) / WARN.knee_hyper + 1; // ≥1 once hyperextended
         issues.push({
           severity: sev,
           weak: [
@@ -126,8 +126,8 @@ function detectIssues(byView) {
             ["calves", `膝過伸展 ${kn.value.toFixed(1)}°：下腿後面の短縮`],
           ],
         });
-      } else if (kn.value < 165) {
-        const sev = (165 - kn.value) / WARN.knee_flex + 1;
+      } else if (kn.value < KNEE.flex) {
+        const sev = (KNEE.flex - kn.value) / WARN.knee_flex + 1;
         issues.push({
           severity: sev,
           weak: [

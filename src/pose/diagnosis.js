@@ -13,7 +13,7 @@
 //   - 最後に週N回の頻度を反映した前向きな見通しを添える。
 
 const V = new URL(import.meta.url).search;
-const { WARN, ENTRY_RATIO, getMetric } = await import("./thresholds.js" + V);
+const { WARN, KNEE, ENTRY_RATIO, getMetric } = await import("./thresholds.js" + V);
 
 function clampFrequency(weeklyFrequency) {
   return Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
@@ -99,15 +99,15 @@ function collectFindings(byView) {
 
     const kn = getMetric(byView, side, "knee_angle");
     if (kn) {
-      if (kn.value >= 178) {
-        const ratio = (kn.value - 178) / WARN.knee_hyper + 1;
+      if (kn.value >= KNEE.hyper) {
+        const ratio = (kn.value - KNEE.hyper) / WARN.knee_hyper + 1;
         push(ratio, 4, (adv) => ({
           desc: `${adv}立つときに膝が後ろへ反りやすいクセ`,
           impact:
             "膝の裏やふくらはぎに力が入り続けやすく、脚が疲れやすくなります。",
         }));
-      } else if (kn.value < 165) {
-        const ratio = (165 - kn.value) / WARN.knee_flex + 1;
+      } else if (kn.value < KNEE.flex) {
+        const ratio = (KNEE.flex - kn.value) / WARN.knee_flex + 1;
         push(ratio, 4, (adv) => ({
           desc: `${adv}膝を軽く曲げたまま立つクセ`,
           impact:
