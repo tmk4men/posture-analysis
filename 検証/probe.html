@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>posture probe</title>
+<style>
+  body { margin: 0; background: #111; color: #eee; font: 13px/1.5 monospace; }
+  .row { display: flex; gap: 8px; padding: 8px; }
+  canvas { max-height: 900px; background: #000; }
+  pre { padding: 8px; white-space: pre-wrap; }
+</style>
+<div class="row" id="canvases"></div>
+<pre id="out">running…</pre>
+<script type="module">
+  const { detectPose } = await import("../src/pose/detector.js");
+  const { computeMetrics, summarizeAll, checkCapture } = await import("../src/pose/angles.js");
+  const { deriveRecommendations } = await import("../src/pose/recommend.js");
+
+  const params = new URLSearchParams(location.search);
+  // 例: ?front=../素材/IMG_1814.jpg&right=../素材/IMG_1815.jpg
+  const JOBS = [
+    { view: "front", src: params.get("front") },
+    { view: "right", src: params.get("right") },
+  ].filter((j) => j.src);
+
+  function loadImage(src) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => rej(new Error("image load failed: " + src));
+      img.src = src;
+    });
+  }
+
+  // MediaPipe の 33 点を描画（インデックス番号つき）。目視で骨格の妥当性を確認する用。
+  function draw(canvas, img, lms) {
+    const maxW = 700;
+    const scale = Math.min(1, maxW / img.naturalWidth);
+    canvas.width = img.naturalWidth * scale;
+    canvas.height = img.naturalHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (!lms) return;
+    const P = (i) => ({ x: lms[i].x * canvas.width, y: lms[i].y * canvas.height });
+    const BONES = [
+      [11, 12], [11, 23], [12, 24], [23, 24],
+      [11, 13], [13, 15], [12, 14], [14, 16],
+      [23, 25], [25, 27], [24, 26], [26, 28],
+      [27, 31], [28, 32], [27, 29], [28, 30],
+      [7, 0], [8, 0],
+    ];
+    ctx.strokeStyle = "#0ff";
+    ctx.lineWidth = 2;
+    for (const [a, b] of BONES) {
+      const pa = P(a), pb = P(b);
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
+    for (const i of [0, 7, 8, 11, 12, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]) {
+      const p = P(i);
+      ctx.fillStyle = "#f0f";
+      ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ff0";
+      ctx.font = "12px monospace";
+      ctx.fillText(String(i), p.x + 6, p.y - 6);
+    }
+  }
+
+  const result = { metricsByView: {}, landmarks: {}, errors: [] };
+  try {
+    for (const job of JOBS) {
+      const img = await loadImage(job.src);
+      const det = await detectPose(img);
+      const canvas = document.createElement("canvas");
+      canvas.id = "cv-" + job.view;
+      document.getElementById("canvases").appendChild(canvas);
+      draw(canvas, img, det?.landmarks ?? null);
+      if (!det) { result.errors.push(job.view + ": no pose"); continue; }
+      result.landmarks[job.view] = det.landmarks.map((p, i) => ({
+        i, x: +p.x.toFixed(4), y: +p.y.toFixed(4), z: +p.z.toFixed(4),
+        v: +(p.visibility ?? 0).toFixed(3),
+      }));
+      const imageSize = { width: img.naturalWidth, height: img.naturalHeight };
+      result.metricsByView[job.view] = computeMetrics(det.landmarks, job.view, imageSize);
+      result.capture = result.capture || {};
+      result.capture[job.view] = checkCapture(det.landmarks, job.view, imageSize);
+      result.size = result.size || {};
+      result.size[job.view] = { w: img.naturalWidth, h: img.naturalHeight };
+    }
+    result.summary = summarizeAll(result.metricsByView);
+    result.recommend = deriveRecommendations(result.summary, [], 2);
+  } catch (e) {
+    result.errors.push(String(e && e.stack || e));
+  }
+  window.__RESULT = result;
+  document.getElementById("out").textContent = JSON.stringify(
+    { metricsByView: result.metricsByView, diagnosis: result.recommend?.diagnosis, errors: result.errors },
+    null, 2,
+  );
+  document.title = "done";
+</script>

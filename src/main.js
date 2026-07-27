@@ -25,9 +25,9 @@ const [
   import("./ui/iap.js" + V),
 ]);
 const { detectPose, warmup } = detectorMod;
-const { computeMetrics, summarizeAll } = anglesMod;
+const { computeMetrics, summarizeAll, checkCapture } = anglesMod;
 const { setupUpload, resetUpload } = uploadMod;
-const { drawPoseOnCanvas, renderMetrics } = overlayMod;
+const { drawPoseOnCanvas, renderMetrics, renderCaptureNotes } = overlayMod;
 const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
 const { PAIN_AREA_OPTIONS, deriveRecommendations } = recommendMod;
 const { requireAuth } = authMod;
@@ -47,11 +47,23 @@ const VIEWS = ["front", "right"];
 
 const state = {
   metricsByView: { front: null, right: null },
+  // 撮影チェックで「この写真では数値を信用できない」と判定された理由（無ければ null）。
+  captureErrors: { front: null, right: null },
 };
+
+// 向きが違う写真が入ったままレポートを作らせない。
+// 計測自体は動いてしまう（数字は出る）ので、ここで止めないと
+// 患者に渡す紙に全く別人のような所見が印字される。
+function blockingCaptureError() {
+  for (const v of VIEWS) {
+    if (state.captureErrors[v]) return { view: v, message: state.captureErrors[v] };
+  }
+  return null;
+}
 
 function refreshAnalyzeButton() {
   const hasAny = VIEWS.some((v) => state.metricsByView[v] !== null);
-  document.getElementById("analyze-btn").disabled = !hasAny;
+  document.getElementById("analyze-btn").disabled = !hasAny || !!blockingCaptureError();
   document.getElementById("print-btn").disabled = !hasAny;
 }
 
@@ -63,12 +75,25 @@ async function handleImage(view, img) {
     const detection = await detectPose(img);
     const landmarks = detection?.landmarks ?? null;
     drawPoseOnCanvas(canvas, img, landmarks);
-    const metrics = landmarks ? computeMetrics(landmarks, view) : null;
+    // 正規化 landmark は x・y のスケールが違うので、必ず元画像のサイズを渡す。
+    // 渡さないと角度も体幹高比も画像のアスペクト比の分だけ歪む。
+    const imageSize = { width: img.naturalWidth, height: img.naturalHeight };
+    const metrics = landmarks ? computeMetrics(landmarks, view, imageSize) : null;
+    const notes = landmarks ? checkCapture(landmarks, view, imageSize) : [];
     state.metricsByView[view] = metrics;
     renderMetrics(view, metrics);
-    setStatus(landmarks ? `${viewLabel(view)} 完了` : `${viewLabel(view)} で骨格を検出できませんでした`);
+    renderCaptureNotes(view, notes);
+    const blocking = notes.find((n) => n.level === "error");
+    state.captureErrors[view] = blocking?.message ?? null;
+    setStatus(
+      !landmarks
+        ? `${viewLabel(view)} で骨格を検出できませんでした`
+        : blocking
+          ? `${viewLabel(view)}：${blocking.message}`
+          : `${viewLabel(view)} 完了`,
+    );
     updateCarouselDots();
-    if (landmarks) {
+    if (landmarks && !blocking) {
       setTimeout(() => advanceCarousel(view), 550);
     }
   } catch (err) {
@@ -186,6 +211,13 @@ function freePlanStatusSuffix() {
 function onAnalyze() {
   const output = document.getElementById("summary-output");
 
+  // 向き違いの写真が残っていたら生成しない（ボタンも無効化しているが二重に防ぐ）。
+  const blocked = blockingCaptureError();
+  if (blocked) {
+    setStatus(`${viewLabel(blocked.view)}：${blocked.message}`);
+    return;
+  }
+
   // 無料プランの月間上限に達していたら、レポートを生成せずアップグレード画面を表示。
   if (!canGenerateReport()) {
     renderLimitReached(output);
@@ -233,6 +265,7 @@ function onReset() {
   for (const v of VIEWS) {
     resetUpload(v);
     state.metricsByView[v] = null;
+    state.captureErrors[v] = null;
   }
   onResetPainAreas();
   document.getElementById("summary-output").innerHTML = "";

@@ -64,10 +64,16 @@ function muscleCardHtml(item, role) {
 function trainingCardHtml(plan, rx) {
   const asset = ASSET_BY_ID[plan.assetId];
   if (!asset) return "";
+  // 画像素材が未入手のマシン（カーフレイズ等）は壊れた画像を出さず、
+  // 種目名だけのカードにする。素材を足せば自動で写真つきに戻る。
+  const visual = asset.image
+    ? `<img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">`
+    : `<div class="training-card__noimg">${escapeHtml(asset.label)}</div>`;
   return `
     <li class="training-card">
-      <img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">
+      ${visual}
       <div class="training-card__rx">
+        ${plan.note ? `<div class="training-card__note">${escapeHtml(plan.note)}</div>` : ""}
         <div class="training-card__rx-label">目安</div>
         <div class="training-card__rx-value">
           <span class="training-card__rx-reps">${rx.reps}回</span>
@@ -77,6 +83,27 @@ function trainingCardHtml(plan, rx) {
       </div>
     </li>
   `;
+}
+
+// UGOQ仕様 ⑥「ユーザー画面イメージ」の姿勢分析結果ブロック。
+// 【上半身】【下半身】の姿勢タイプ名と、その判定項目・主な改善ポイントを出す。
+function postureResultHtml(posture) {
+  if (!posture) return "";
+  const row = (heading, result) => `
+    <div class="posture-type">
+      <div class="posture-type__head">【${heading}】</div>
+      <div class="posture-type__name">${escapeHtml(result.type.name)}</div>
+      <div class="posture-type__meta">
+        <span>判定項目：${escapeHtml(result.type.criteria)}</span>
+        <span>主な改善ポイント：${escapeHtml(result.type.focus)}</span>
+      </div>
+    </div>`;
+  return `
+    <section class="posture-result">
+      <h2 class="posture-result__title">姿勢分析結果</h2>
+      ${row("上半身", posture.upper)}
+      ${row("下半身", posture.lower)}
+    </section>`;
 }
 
 export function renderReport({ findings, patient, photos }) {
@@ -126,6 +153,8 @@ export function renderReport({ findings, patient, photos }) {
         </div>
 
         <div class="report-right">
+          ${postureResultHtml(findings.posture)}
+
           <div class="report-diagnosis">
             ${escapeHtml(findings.diagnosis || "")
               .split(/\n+/)
@@ -168,23 +197,47 @@ export function renderReport({ findings, patient, photos }) {
   const freqLabel = freq >= 5 ? "週5回以上" : `週${freq}回`;
   const rx = prescriptionForFrequency(freq);
 
-  const trainingCards = findings.trainingPlan
-    .map((p) => trainingCardHtml(p, rx))
-    .join("");
+  // 本日のメニュー（UGOQ仕様 ⑤ STEP5〜STEP8／⑥ ユーザー画面イメージ）。
+  // ①ウォーミングアップ → ②ラクレッチ3種 → ③筋トレ3種 → ④有酸素（任意） → ⑤クールダウン。
+  const posture = findings.posture;
+  const cardsFor = (section) =>
+    findings.trainingPlan
+      .filter((p) => p.section === section)
+      .map((p) => trainingCardHtml(p, rx))
+      .join("");
+  const stretchCards = cardsFor("stretch");
+  const strengthCards = cardsFor("strength");
+  const noteStep = (num, label, detail) => `
+    <li class="menu-step menu-step--note">
+      <div class="menu-step__head"><span class="menu-step__num">${num}</span>${escapeHtml(label)}</div>
+      <div class="menu-step__detail">${escapeHtml(detail)}</div>
+    </li>`;
+  const cardStep = (num, label, cards) => `
+    <li class="menu-step">
+      <div class="menu-step__head"><span class="menu-step__num">${num}</span>${escapeHtml(label)}</div>
+      <ul class="training-grid">
+        ${cards || "<li class='training-card training-card--empty'>種目を選定できませんでした</li>"}
+      </ul>
+    </li>`;
 
   const page2 = `
     <article class="report-page report-page--2">
       <header class="report-head report-head--green">
         <div class="report-head__brand">POSTURA <span>Training Plan</span></div>
-        <h1 class="report-head__title">姿勢ケア ${escapeHtml(freqLabel)}プログラム</h1>
+        <h1 class="report-head__title">本日のメニュー（${escapeHtml(freqLabel)}）</h1>
         <p class="report-head__lead">姿勢チェックの結果に合わせた個別トレーニングメニュー</p>
       </header>
 
-      <ul class="training-grid">
-        ${trainingCards || "<li class='training-card training-card--empty'>マシン推奨を生成できませんでした</li>"}
-      </ul>
+      <ol class="menu-steps">
+        ${noteStep("①", posture?.warmup?.label ?? "ウォーミングアップ（5分）", posture?.warmup?.detail ?? "軽い有酸素運動・動的ストレッチ")}
+        ${cardStep("②", "ラクレッチ（ストレッチ）", stretchCards)}
+        ${cardStep("③", "筋力トレーニング", strengthCards)}
+        ${noteStep("④", posture?.cardio?.label ?? "有酸素運動（任意）", posture?.cardio?.detail ?? "ウォーキング15分 など")}
+        ${noteStep("⑤", posture?.cooldown?.label ?? "クールダウン（5分）", posture?.cooldown?.detail ?? "胸ストレッチ・深呼吸 など")}
+      </ol>
 
       <footer class="report-foot">
+        <small>※ 本メニューは一般的な目安です。症状や体力に応じて、整骨院・トレーナーが個別に調整します。</small>
         <small>※ ${escapeHtml(freqLabel)}、無理のない重さ・可動域で行いましょう。痛みがある場合は中止して施術者にご相談ください。</small>
         <small class="report-foot__disclaimer">${DISCLAIMER}</small>
       </footer>
@@ -192,6 +245,41 @@ export function renderReport({ findings, patient, photos }) {
   `;
 
   container.innerHTML = page1 + page2;
+  fitPage1ToA4(container);
+}
+
+// 1ページ目をA4（297mm）に収める。
+//
+// 高さは申告部位の数・所見文の長さ・筋肉名の折り返しで変わるので、CSSの固定値だけでは
+// 全ケースを収めきれない（実測で最大 316mm まで伸び、印刷が2枚に割れていた）。
+// あふれる分は人体図に吸収させ、収まるまで段階的に縮める。
+// 同じ入力なら必ず同じ結果になる（乱数もアニメーションも使わない）。
+const A4_HEIGHT_PX = (297 * 96) / 25.4;
+const ANATOMY_MAX_PX = 215; // app.css の .anatomy-svg max-height と揃える
+const ANATOMY_MIN_PX = 110; // これ以上小さいと筋肉のハイライトが読めない
+
+function fitPage1ToA4(container) {
+  const page = container.querySelector(".report-page--1");
+  if (!page) return;
+  const svgs = page.querySelectorAll(".anatomy-svg");
+  if (!svgs.length) return;
+
+  const shrink = () => {
+    for (let h = ANATOMY_MAX_PX; h >= ANATOMY_MIN_PX; h -= 5) {
+      svgs.forEach((s) => { s.style.maxHeight = `${h}px`; });
+      // .report-page には min-height:297mm があるので、中身が収まっているときの
+      // ボックス高さはちょうど 297mm になる。これを下回ることは無いため、
+      // 判定は「297mm を超えていないか」で行う（余裕を引くと永久に成立せず、
+      // 毎回最小サイズまで縮めてしまう）。端数のぶんだけ許容する。
+      if (page.getBoundingClientRect().height <= A4_HEIGHT_PX + 0.05) return;
+    }
+  };
+  shrink();
+
+  // 写真は data URL でも読み込みが非同期なので、確定してからもう一度合わせる。
+  for (const img of page.querySelectorAll("img")) {
+    if (!img.complete) img.addEventListener("load", shrink, { once: true });
+  }
 }
 
 // Backwards-compatible wrapper for the old call sites (raw text fallback).

@@ -183,6 +183,30 @@ export const EXERCISE_ASSETS = [
     strengthens: ["adductors", "gluteus_medius", "glutes"],
     stretches: [] },
 
+  // UGOQ仕様（IMG_2008.jpg ③④）の種目名に対応させるための追加エントリ。
+  // ヒップアブダクション（外転）とアダクター（内転）は同じ「インナー、アウターサイ」の
+  // 2モードなので画像は共用し、ラベルだけ仕様書の呼び方に合わせる。
+  { id: "hip_abduction",
+    label: "ヒップアブダクション（インナー、アウターサイ／外転）",
+    image: DIR + "3A4181BD-5FF1-436D-8880-DF9B496A16C9.webp",
+    category: "strength",
+    strengthens: ["gluteus_medius", "glutes"],
+    stretches: [] },
+  { id: "adductor_machine",
+    label: "アダクター（インナー、アウターサイ／内転）",
+    image: DIR + "3A4181BD-5FF1-436D-8880-DF9B496A16C9.webp",
+    category: "strength",
+    strengthens: ["adductors"],
+    stretches: [] },
+  // カーフレイズはマシン写真の素材が未入手。image を持たないアセットは
+  // レポート側で文字だけのカードとして描画する（壊れた画像を出さない）。
+  { id: "calf_raise",
+    label: "カーフレイズ",
+    image: null,
+    category: "strength",
+    strengthens: ["calves"],
+    stretches: [] },
+
   // ───── 背筋（脊柱起立筋） ─────
   { id: "back_extension_bench",
     label: "バックエクステンションベンチ",

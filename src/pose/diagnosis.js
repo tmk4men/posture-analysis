@@ -33,16 +33,19 @@ function severityWord(ratio) {
 
 // ---- 計測値 → 所見候補 -------------------------------------------------
 //
-// 各エントリは { ratio, priority, build(adv) } を持つ。
+// 各エントリは { ratio, priority, plane, build(adv) } を持つ。
 //   ratio    … 逸脱の大きさ。大きいほど主所見として優先。
 //   priority … ratio 同点時の安定ソート用の固定順位。
+//   plane    … 'sagittal'（側面写真＝前後の崩れ）/ 'frontal'（正面写真＝左右差）。
+//              副所見をどちらから選ぶかの判断に使う。
 //   build    … 度合い語 adv を受け取り { desc, impact } を返す関数。
 //              desc   … 「〜な姿勢」「〜なクセ」で終わる特徴の描写（名詞句）。
 //              impact … その特徴が日常でどう影響しやすいかの一文。
 function collectFindings(byView) {
   const out = [];
   const side = byView?.right ? "right" : byView?.left ? "left" : null;
-  const push = (ratio, priority, build) => out.push({ ratio, priority, build });
+  let plane = "sagittal";
+  const push = (ratio, priority, build) => out.push({ ratio, priority, plane, build });
 
   // ===== 側面ビュー（右優先） =====
   if (side) {
@@ -118,6 +121,7 @@ function collectFindings(byView) {
   }
 
   // ===== 正面ビュー =====
+  plane = "frontal";
   if (byView?.front && byView.front.length) {
     const st = getMetric(byView, "front", "shoulder_tilt");
     if (st && Math.abs(st.value) / WARN.shoulder_tilt >= ENTRY_RATIO) {
@@ -217,10 +221,18 @@ export function buildDiagnosis(metricsByView, painAreas = [], weeklyFrequency = 
   const top = findings[0];
   const topBuilt = top.build(severityWord(top.ratio));
 
+  // 副所見は「主所見と違う面」から優先して選ぶ。
+  // 正面（左右差）と側面（前後の崩れ）は別々の写真から出る別の話なので、
+  // 単純な ratio 順だと片方の写真の所見が2件とも占めて、
+  // もう一方の写真で見えている崩れ（猫背・巻き肩など）が一度も触れられない。
+  // 反対の面に採用済みの所見があればそれを、無ければ従来どおり ratio 2位を使う。
+  const secondEntry =
+    findings.slice(1).find((f) => f.plane !== top.plane) ?? findings[1];
+
   // 第1文：所見が2件以上あれば副所見を短く併記、1件ならそのまま。
   let sentence1;
-  if (findings.length >= 2) {
-    const second = findings[1].build(""); // 副所見は度合い語なしで簡潔に
+  if (secondEntry) {
+    const second = secondEntry.build(""); // 副所見は度合い語なしで簡潔に
     sentence1 = `${topBuilt.desc}に加えて、${second.desc}も見られます。`;
   } else {
     sentence1 = `${topBuilt.desc}です。`;

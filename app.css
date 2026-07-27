@@ -410,6 +410,32 @@ button {
 .metric-list .metric-value { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
 .metric-list .metric-value.warn { color: var(--warn); }
 
+/* 撮影チェック（向き違い・うつむき等）の注意書き */
+.capture-notes {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: none;
+}
+.capture-notes.has-data { display: block; }
+.capture-note {
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.capture-note + .capture-note { margin-top: 0.35rem; }
+.capture-note--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+.capture-note--tip {
+  background: #f6f8fc;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
 /* ---------- Summary ---------- */
 .summary-section {
   background: var(--card);
@@ -672,12 +698,14 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
 .report-head--green .report-head__title { color: #1f4d27; }
 
 /* Patient-reported pain areas (report) */
+/* 不調部位は最大9件まで選べる。全部選ばれても行数が膨らみすぎないよう詰める
+   （A4 1枚に収める都合。以前は3行に折り返してページからあふれていた）。 */
 .report-pain-areas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.45rem;
-  padding: 0.45rem 0.65rem;
+  gap: 0.18rem 0.3rem;
+  padding: 0.3rem 0.5rem;
   background: #f4ebf6;
   border: 1px solid #d2b3da;
   border-left: 3px solid #6a3a78;
@@ -695,13 +723,14 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
 .report-pain-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.12rem 0.55rem;
+  padding: 0.05rem 0.4rem;
   background: #fff;
   border: 1px solid #c4a3cd;
   color: #4a2655;
   border-radius: 999px;
-  font-size: 9pt;
+  font-size: 8.2pt;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ===== Page 1 layout ===== */
@@ -747,7 +776,7 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   border-radius: 4px;
 }
 
-.report-right { display: flex; flex-direction: column; gap: 0.6rem; }
+.report-right { display: flex; flex-direction: column; gap: 0.45rem; }
 
 .report-diagnosis {
   font-size: 10.5pt;
@@ -778,10 +807,12 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   align-items: center;
   gap: 0.15rem;
 }
+/* A4 1枚に収めるための上限。340px だと人体図だけで約90mm使い、
+   筋肉リストと合わせてページからあふれる。 */
 .anatomy-svg {
   width: 100%;
   height: auto;
-  max-height: 340px;
+  max-height: 215px;
 }
 .anatomy-view__caption {
   font-size: 9pt;
@@ -855,12 +886,12 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
 .muscle-list--tight header .muscle-list__icon { color: #b85e15; }
 .muscle-list__title { color: #1f2a36; }
 .muscle-list__sub  { color: var(--muted); font-weight: 500; font-size: 8.5pt; margin-left: 0.2rem; }
-.muscle-list ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.32rem; }
+.muscle-list ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.26rem; }
 .muscle-card {
   background: #fff;
   border: 1px solid #e0d8c8;
   border-radius: 4px;
-  padding: 0.32rem 0.55rem;
+  padding: 0.26rem 0.5rem;
 }
 .muscle-card__label { font-weight: 600; font-size: 9.5pt; color: #1f2a36; }
 .muscle-card__note  { font-size: 8.8pt; color: #5a6878; margin-top: 0.08rem; line-height: 1.4; }
@@ -886,15 +917,103 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   color: #6b6259;
 }
 
-/* ===== Page 2 layout (training plan) ===== */
+/* ===== 姿勢分析結果（UGOQ仕様 U1-U4 / L1-L4）===== */
+/* A4 1枚に収める必要があるので、行数を増やさない詰めたレイアウトにする。
+   （見出し・タイプ名・判定項目＋改善ポイント を各1行に収める） */
+.posture-result {
+  border: 1px solid #d8d2c8;
+  border-radius: 8px;
+  background: #faf8f4;
+  padding: 0.4rem 0.6rem;
+}
+.posture-result__title {
+  margin: 0 0 0.25rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b6259;
+}
+.posture-type + .posture-type { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px dashed #e2dcd2; }
+.posture-type__head { font-size: 0.72rem; color: #8a8178; }
+.posture-type__name {
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.25;
+  display: inline;
+}
+.posture-type__head { display: inline; margin-right: 0.2rem; }
+.posture-type__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.8rem;
+  margin-top: 0.05rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #6b6259;
+}
+
+/* ===== Page 2 layout (本日のメニュー STEP1-5) ===== */
+.menu-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+}
+.menu-step { display: flex; flex-direction: column; gap: 0.35rem; break-inside: avoid; }
+.menu-step__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2f6b46;
+}
+.menu-step__num { font-size: 1rem; }
+.menu-step--note {
+  border: 1px solid #d6e2d8;
+  border-radius: 8px;
+  background: #f7fbf8;
+  padding: 0.45rem 0.7rem;
+}
+.menu-step--note .menu-step__head { font-size: 0.84rem; }
+.menu-step__detail { font-size: 0.78rem; color: #4a5a50; }
+
 .training-grid {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.7rem;
-  flex: 1;
+}
+/* 仕様書④の種目注記（例：レッグエクステンション「VMOを意識」）。
+   カード画像は種目名などが焼き込み済みなので、注記は「目安」パネル内に置く。 */
+.training-card__note {
+  margin-bottom: 0.2rem;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: #2f6b46;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.training-card__noimg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  min-height: 6.5rem;
+  padding: 1.2rem 0.6rem 2.6rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #4a5a50;
+  background: repeating-linear-gradient(45deg, #f7fbf8, #f7fbf8 8px, #eef5f0 8px, #eef5f0 16px);
 }
 /* Each card is the pre-rendered exercise image plus a dynamic 目安 panel
    absolutely positioned over the white-out area in the bottom-right. */

@@ -1,19 +1,21 @@
-// Deterministic posture-issue → muscle/exercise selection.
-// AI is used only for the diagnosis narrative; the picks here are reproducible
-// from the measured metrics so that two different patients always get
-// noticeably different reports.
+// 計測値 → 姿勢タイプ・種目・筋肉の決定的な選定（AI不使用）。
+//
+// 種目の選定は UGOQ仕様（IMG_2008.jpg）の処方マスターに従う：
+// 上半身 U1〜U4・下半身 L1〜L4 を判定し、その行の3種目ずつを組み合わせて
+// ラクレッチ3・筋トレ3にする（実装は postureTypes.js）。
+// 人体図に出す弱化筋・短縮筋は、従来どおり計測値と申告部位から積み上げる。
 
 const V = new URL(import.meta.url).search;
-const [musclesMod, assetsMod, thresholdsMod, diagnosisMod] = await Promise.all([
+const [musclesMod, thresholdsMod, diagnosisMod, typesMod] = await Promise.all([
   import("../data/muscles.js" + V),
-  import("../data/exerciseAssets.js" + V),
   import("./thresholds.js" + V),
   import("./diagnosis.js" + V),
+  import("./postureTypes.js" + V),
 ]);
 const { MUSCLE_BY_ID } = musclesMod;
-const { EXERCISE_ASSETS } = assetsMod;
 const { WARN, KNEE, ENTRY_RATIO, getMetric } = thresholdsMod;
 const { buildDiagnosis } = diagnosisMod;
+const { analyzePosture } = typesMod;
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
 // Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s
@@ -25,6 +27,16 @@ const PRESCRIPTION_BY_FREQUENCY = {
   4: { reps: 10, sets: 2 },
   5: { reps: 10, sets: 2 },
 };
+
+// 人体図と筋肉リストに載せる最大件数（弱化・短縮それぞれ）。
+// severity 降順に並べたうえで先頭からこの数だけ採る。
+//
+// 上限が無かった頃は、逸脱を ENTRY_RATIO=0.5 から拾う関係で
+// 弱化9・短縮8 のように17個並び、レポート1ページ目がA4（297mm）を
+// 80mm以上はみ出して印刷が2枚に割れていた。患者に渡す紙として
+// 17個は読み切れないので、効いている順に上位だけを載せる。
+// 種目の選定は UGOQ の姿勢タイプ由来なので、ここを絞っても処方は変わらない。
+const MAX_MUSCLES_PER_LIST = 5;
 
 export function prescriptionForFrequency(weeklyFrequency) {
   const n = Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
@@ -290,139 +302,6 @@ function aggregate(issues, kind) {
   return out;
 }
 
-// Per-patient pseudo-randomization seeded by metric values so two patients
-// with even slightly different posture get different exercise picks, but the
-// same input always reproduces the same output.
-function metricSeed(byView) {
-  let h = 2166136261;
-  for (const view of Object.values(byView ?? {})) {
-    if (!view) continue;
-    for (const m of view) {
-      h = Math.imul(h ^ Math.round((m.value ?? 0) * 100), 16777619);
-    }
-  }
-  return (h >>> 0) || 1;
-}
-
-function makeRng(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function pickOne(arr, rng) {
-  return arr[Math.floor(rng() * arr.length)];
-}
-
-// 1筋肉に対する候補アセットの「焦点度」スコア。
-// 単一筋肉ターゲット (=specificityがhigh) を優先することで、
-// 「abdominal」のようなマルチターゲット汎用アセットが先に選ばれ続けるのを防ぐ。
-function assetSpecificity(asset, targetMuscleId, kind) {
-  const list = kind === "strength" ? asset.strengthens : asset.stretches;
-  // 該当筋肉が含まれていなければ無効
-  if (!list.includes(targetMuscleId)) return 0;
-  // ターゲット筋以外も含む数 → 少ないほど focused
-  return 1 / list.length;
-}
-
-function pickFocused(candidates, targetId, kind, rng, allAssets) {
-  // specificity でソート、同点は seed で
-  const scored = candidates.map((id) => {
-    const asset = allAssets.find((a) => a.id === id);
-    return { id, score: asset ? assetSpecificity(asset, targetId, kind) : 0 };
-  });
-  scored.sort((a, b) => b.score - a.score);
-  // 最高点のグループだけ取り出し、その中から rng で1つ
-  const topScore = scored[0]?.score ?? 0;
-  const topTier = scored.filter((s) => s.score === topScore);
-  return pickOne(topTier.map((s) => s.id), rng);
-}
-
-// Build a training plan (target 4 cards, min 1). Steps:
-//   1) For each WEAK muscle in severity order, pick the most focused strength asset.
-//   2) For each TIGHT muscle in severity order, pick the most focused stretch asset.
-//   3) Top up by re-iterating the higher-severity muscles for more variety on
-//      whichever side (weak vs tight) has the strongest unfilled finding.
-// No hardcoded generic fallback — if no clinical candidates remain we show fewer
-// cards rather than padding with unrelated exercises.
-function buildTrainingPlan(weakList, tightList, rng) {
-  const strengthByMuscle = new Map();
-  const stretchByMuscle = new Map();
-  for (const asset of EXERCISE_ASSETS) {
-    for (const id of asset.strengthens) {
-      if (!strengthByMuscle.has(id)) strengthByMuscle.set(id, []);
-      strengthByMuscle.get(id).push(asset.id);
-    }
-    for (const id of asset.stretches) {
-      if (!stretchByMuscle.has(id)) stretchByMuscle.set(id, []);
-      stretchByMuscle.get(id).push(asset.id);
-    }
-  }
-
-  const used = new Set();
-  const plan = [];
-
-  const weakIds = weakList.map((m) => m.id);
-  const tightIds = tightList.map((m) => m.id);
-  const sevOf = new Map([
-    ...weakList.map((m) => [`w:${m.id}`, m.severity ?? 0]),
-    ...tightList.map((m) => [`t:${m.id}`, m.severity ?? 0]),
-  ]);
-
-  // Phase 1: 1 strength pick per weak muscle (severity-sorted), cap at 4 cards
-  for (const muscleId of weakIds) {
-    if (plan.length >= 4) break;
-    const candidates = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
-    if (!candidates.length) continue;
-    const pick = pickFocused(candidates, muscleId, "strength", rng, EXERCISE_ASSETS);
-    used.add(pick);
-    plan.push({ assetId: pick });
-  }
-
-  // Phase 2: 1 stretch pick per tight muscle (severity-sorted), cap at 6 cards
-  for (const muscleId of tightIds) {
-    if (plan.length >= 6) break;
-    const candidates = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
-    if (!candidates.length) continue;
-    const pick = pickFocused(candidates, muscleId, "stretch", rng, EXERCISE_ASSETS);
-    used.add(pick);
-    plan.push({ assetId: pick });
-  }
-
-  // Phase 3: top-up. Each round, pick from the SEVERITY-HIGHEST muscle that
-  // still has unused candidates — alternating between weak and tight by which
-  // unfilled finding is more pressing for THIS patient.
-  while (plan.length < 6) {
-    const options = [];
-    for (const muscleId of weakIds) {
-      const cands = (strengthByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
-      if (cands.length) options.push({
-        muscleId, kind: "strength", cands,
-        severity: sevOf.get(`w:${muscleId}`) ?? 0,
-      });
-    }
-    for (const muscleId of tightIds) {
-      const cands = (stretchByMuscle.get(muscleId) || []).filter((id) => !used.has(id));
-      if (cands.length) options.push({
-        muscleId, kind: "stretch", cands,
-        severity: sevOf.get(`t:${muscleId}`) ?? 0,
-      });
-    }
-    if (!options.length) break;
-    options.sort((a, b) => b.severity - a.severity);
-    const pick = pickFocused(options[0].cands, options[0].muscleId, options[0].kind, rng, EXERCISE_ASSETS);
-    used.add(pick);
-    plan.push({ assetId: pick });
-  }
-
-  return plan.slice(0, 6);
-}
-
 // 患者から申告された主訴部位（肩こり・腰痛・膝痛など）を、解剖学的に対応する
 // 筋肉ハイライトに変換する。型分類は使わず、入力された部位ごとに該当筋肉を
 // 個別に severity = 1.0（= 臨床閾値相当）で重ねる。これにより、姿勢計測値が
@@ -551,13 +430,24 @@ export function deriveRecommendations(metricsByView, painAreas = [], weeklyFrequ
   const toList = (m) =>
     [...m.entries()]
       .sort((a, b) => b[1].severity - a[1].severity)
+      .slice(0, MAX_MUSCLES_PER_LIST)
       .map(([id, v]) => ({ id, note: v.note, severity: v.severity }));
 
   const weakMuscles = toList(weakAgg);
   const tightMuscles = toList(tightAgg);
 
-  const rng = makeRng(metricSeed(metricsByView));
-  const trainingPlan = buildTrainingPlan(weakMuscles, tightMuscles, rng);
+  // STEP2〜STEP8：姿勢タイプの判定と本日のメニューの組み立て（UGOQ仕様）。
+  // 種目は姿勢タイプの処方マスターだけで決まるので、筋肉リストとは独立に再現できる。
+  const posture = analyzePosture(metricsByView);
+  const planItem = (assetId, section) => ({
+    assetId,
+    section,
+    note: posture.menu.notes?.[assetId] ?? null,
+  });
+  const trainingPlan = [
+    ...posture.menu.stretch.map((id) => planItem(id, "stretch")),
+    ...posture.menu.strength.map((id) => planItem(id, "strength")),
+  ];
 
   // 表示用に severity を落とす（report.js は {id, note} だけ参照）
   const stripSeverity = (m) => ({ id: m.id, note: m.note });
@@ -567,6 +457,7 @@ export function deriveRecommendations(metricsByView, painAreas = [], weeklyFrequ
   return {
     // 所見文もルールベースで生成（旧：外部AI）。同じ計測値・部位・頻度なら常に同文。
     diagnosis: buildDiagnosis(metricsByView, painAreas, freq),
+    posture,
     weakMuscles: weakMuscles.map(stripSeverity),
     tightMuscles: tightMuscles.map(stripSeverity),
     trainingPlan,

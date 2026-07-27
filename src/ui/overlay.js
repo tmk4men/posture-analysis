@@ -112,3 +112,22 @@ export function renderMetrics(view, metrics) {
     .join("");
   list.classList.add("has-data");
 }
+
+// 撮影チェックの結果（angles.js checkCapture）をアップロードカードに出す。
+// error＝その写真では数値を信用できない、tip＝計測は出るが精度が落ちる条件。
+export function renderCaptureNotes(view, notes) {
+  const host = document.querySelector(`.capture-notes[data-view="${view}"]`);
+  if (!host) return;
+  if (!notes || !notes.length) {
+    host.innerHTML = "";
+    host.classList.remove("has-data");
+    return;
+  }
+  host.innerHTML = notes
+    .map(
+      (n) =>
+        `<li class="capture-note capture-note--${n.level === "error" ? "error" : "tip"}">${n.message}</li>`
+    )
+    .join("");
+  host.classList.add("has-data");
+}

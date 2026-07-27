@@ -22,6 +22,7 @@ scripts/asc/sales-*.tsv
 画像/
 参考画像/
 素材画像/
+素材/
 トレーニング/
 svg候補プレビュー/
 .debug-anatomy/

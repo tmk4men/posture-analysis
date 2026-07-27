@@ -58,6 +58,11 @@ A4で2〜3枚に収まるレイアウトで、患者にお渡しできます。
 
 数値はすべて MediaPipe Pose Landmarker（Google製、ブラウザ完結のオンデバイスAI）で検出した33点の骨格座標から計算しています。
 
+写真の向きが枠と違う（正面の枠に横向きの写真を入れた等）場合は赤い注意書きを出し、
+レポートを作れないようにしています。うつむき・顔の横向き・脚が隠れている等は
+計測できる項目だけを出し、残りは「計測していません」と明示します。
+計測の詳しい前提は `DIAGNOSIS_RULEBOOK.md` の「計測の前提」を参照してください。
+
 ## プライバシーとセキュリティ
 
 - 写真・計測値・所見文はすべて **ブラウザ内のみで処理** され、外部への送信は一切ありません（AIも使いません）
@@ -80,25 +85,38 @@ katsu姿勢分析/
     ├── main.js             # 全体フロー制御
     ├── pose/
     │   ├── detector.js     # MediaPipe Pose初期化と推論
-    │   ├── angles.js       # ランドマーク→角度計算
-    │   ├── thresholds.js   # 逸脱しきい値（所見文と筋肉選定で共有）
+    │   ├── angles.js       # ランドマーク→角度計算・撮影チェック
+    │   ├── thresholds.js   # 逸脱しきい値（所見文・姿勢タイプ判定・筋肉選定で共有）
+    │   ├── postureTypes.js # UGOQ仕様の姿勢タイプ判定とメニュー生成（U1-U4 / L1-L4）
     │   ├── diagnosis.js    # 所見文のルールベース生成（AI不使用）
-    │   └── recommend.js    # 筋肉・種目・回数×セットのルールベース選定
+    │   └── recommend.js    # 筋肉ハイライトとメニューの取りまとめ
     └── ui/
         ├── upload.js       # 写真アップロードUI
-        ├── overlay.js      # Canvas骨格描画と計測値表示
+        ├── overlay.js      # Canvas骨格描画・計測値表示・撮影チェック表示
         └── report.js       # 所見レンダリングと印刷
+検証/
+├── geometry.test.mjs       # 幾何計算と所見文の自動テスト（node --test）
+├── ugoq-spec.test.mjs      # UGOQ仕様書との突き合わせテスト
+├── probe.html              # 実写を通して計測値を目視確認するページ
+└── fixtures/
+    └── real-photos.json    # 実写2枚の landmark（回帰テスト用の固定データ）
 ```
+
+姿勢タイプの判定と本日のメニューの決め方は `UGOQ_RULEBOOK.md`、
+所見文の作り方は `DIAGNOSIS_RULEBOOK.md` にルールを全部書いています。
 
 > `worker/`（Cloudflare Worker のAIプロキシ）は旧AI連携用で、現在は未使用です。
 > AIを完全に外したため呼び出されません。デプロイ済みのものは別途停止して構いません。
 
 ## カスタマイズ
 
-- **計測項目を増やす**：`src/pose/angles.js` の `computeMetrics` に追加
+- **計測項目を増やす**：`src/pose/angles.js` の `computeMetrics` に追加（変更後は `node --test 検証/geometry.test.mjs`）
 - **所見文の言い回し・ルール変更**：`src/pose/diagnosis.js`（詳細は `DIAGNOSIS_RULEBOOK.md`）
 - **検出感度（しきい値）変更**：`src/pose/thresholds.js`（所見文と筋肉選定に同時反映）
 - **印刷レイアウト調整**：`app.css` の `@media print` セクション
+- **A4に収まる仕組み**：レポート1ページ目は申告部位の数や所見文の長さで高さが変わるため、
+  `src/ui/report.js` の `fitPage1ToA4()` が人体図を段階的に縮めて297mmに収めます。
+  筋肉リストの表示数は `src/pose/recommend.js` の `MAX_MUSCLES_PER_LIST`（既定5）
 - **モデル変更**：`src/pose/detector.js` の `MODEL_URL`（lite / full / heavy の3種類）
 
 ## デプロイ時のキャッシュバスター

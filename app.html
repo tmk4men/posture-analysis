@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="POSTURA" />
 
-  <link rel="stylesheet" href="app.css?v=20260717-0959" />
+  <link rel="stylesheet" href="app.css?v=20260727-0808" />
 </head>
 <body>
   <dialog id="auth-dialog" class="auth-dialog">
@@ -116,6 +116,7 @@
           <span class="dropzone-hint">タップして写真を選択</span>
         </label>
         <div class="canvas-wrap"><canvas data-view="front"></canvas></div>
+        <ul class="capture-notes" data-view="front"></ul>
         <ul class="metric-list" data-view="front"></ul>
       </article>
       <article class="upload-card" data-view="right">
@@ -125,6 +126,7 @@
           <span class="dropzone-hint">タップして写真を選択</span>
         </label>
         <div class="canvas-wrap"><canvas data-view="right"></canvas></div>
+        <ul class="capture-notes" data-view="right"></ul>
         <ul class="metric-list" data-view="right"></ul>
       </article>
     </section>
@@ -146,7 +148,7 @@
     </section>
   </main>
 
-  <script type="module" src="src/main.js?v=20260717-0959"></script>
+  <script type="module" src="src/main.js?v=20260727-0808"></script>
   <script>
     // PWA: サービスワーカー登録（オフライン起動・モデルキャッシュ）
     if ("serviceWorker" in navigator) {

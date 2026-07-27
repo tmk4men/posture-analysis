@@ -39,11 +39,16 @@ export function resetUpload(view) {
   const dropzone = card.querySelector(".dropzone");
   const wrap = card.querySelector(".canvas-wrap");
   const list = card.querySelector(".metric-list");
+  const notes = card.querySelector(".capture-notes");
   input.value = "";
   dropzone.classList.remove("has-image");
   wrap.classList.remove("has-image");
   list.classList.remove("has-data");
   list.innerHTML = "";
+  if (notes) {
+    notes.classList.remove("has-data");
+    notes.innerHTML = "";
+  }
   const canvas = wrap.querySelector("canvas");
   const ctx = canvas.getContext("2d");
   canvas.width = 0;
