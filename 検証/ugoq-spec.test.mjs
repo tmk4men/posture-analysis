@@ -55,7 +55,8 @@ const SPEC_STRENGTH_MASTER = {
   "アダクター": "adductor_machine",
   "カーフレイズ": "calf_raise",
 };
-// ② ラクレッチマスター
+// ② ラクレッチマスター（先方の呼称は「主な適応姿勢」。効きやすい姿勢の一覧であって
+//    処方表ではないので、④ と食い違うセルがあっても正は ④・2026-08-02 確定）
 const SPEC_STRETCH_MASTER = {
   CHEST: "stretch_chest",
   SHOULDER: "stretch_shoulder",
@@ -146,12 +147,14 @@ test("ラクレッチ5種はストレッチ、筋トレ12種は筋力として�
   }
 });
 
-test("画像素材が無いのはカーフレイズだけ（他は必ず写真つき）", () => {
+// 2026-08-02、最後まで残っていたカーフレイズにもカードを用意した（レッグプレスマシンで
+// 実施するという先方回答にもとづき、シーテッドレッグプレスのカードから起こしている）。
+test("仕様書の全種目に写真つきのカードがある", () => {
   const missing = Object.entries(SPEC_STRENGTH_MASTER)
     .concat(Object.entries(SPEC_STRETCH_MASTER))
     .filter(([, id]) => !ASSET_BY_ID[id].image)
     .map(([name]) => name);
-  assert.deepEqual(missing, ["カーフレイズ"]);
+  assert.deepEqual(missing, []);
 });
 
 // ---- ④ メニュー処方マスター ---------------------------------------------
@@ -265,13 +268,23 @@ test("STEP4：片側が正常ならもう片側の①②③をそのまま使う
   assert.deepEqual(onlyUpper.stretch, PRESCRIPTION.U4.stretch);
 });
 
-test("STEP4：上下とも正常なら維持メニュー（仕様書に行が無いための実装追加）", () => {
+// 維持メニューは仕様書④に行が無く、こちらから提案して先方が 2026-08-02 に採用を回答した内容。
+// 実装（PRESCRIPTION.MAINTENANCE）と突き合わせるとトートロジーになるので、
+// 回答された種目名をここに直書きして固定する。
+test("STEP4：上下とも正常なら維持メニュー（先方確定・2026-08-02）", () => {
   const menu = buildMenu(
     { type: UPPER_TYPES.U1, ratio: 0 },
     { type: LOWER_TYPES.L1, ratio: 0 },
   );
   assert.equal(menu.balance, "maintenance");
-  assert.deepEqual(menu.stretch, PRESCRIPTION.MAINTENANCE.stretch);
+  assert.deepEqual(
+    menu.stretch,
+    ["CHEST", "HIP", "TWISTER"].map((n) => SPEC_STRETCH_MASTER[n]),
+  );
+  assert.deepEqual(
+    menu.strength,
+    ["ローイング", "アブドミナル", "ヒップスラスト"].map((n) => SPEC_STRENGTH_MASTER[n]),
+  );
 });
 
 test("STEP1・7・8 の固定文言が仕様書 ⑥ どおり", () => {

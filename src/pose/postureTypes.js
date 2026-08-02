@@ -42,6 +42,13 @@ export const LOWER_TYPES = {
 };
 
 // ---- ④ メニュー処方マスター ---------------------------------------------
+//
+// ここがアプリの正式マスターデータ（先方確定・2026-08-02）。
+// ② は「主な適応姿勢」＝そのラクレッチが効きやすい姿勢の一覧であって処方表ではないので、
+// ②と④が食い違うセルがあっても ④ を実装する。②に無い使い方は姿勢改善の補助という位置づけ：
+//   ・フラットバック（U4）の HIP … 骨盤可動性・股関節伸展・骨盤前後傾の誘導が目的
+//   ・骨盤前傾／O脚／X脚 の TWISTER … 胸椎回旋・骨盤回旋・体幹連動の改善が目的
+//
 // 値は EXERCISE_ASSETS の id。仕様書の種目名との対応：
 //   CHEST=stretch_chest / SHOULDER=stretch_shoulder / TWISTER=stretch_twister /
 //   HIP=stretch_hip / ADDUCTOR=stretch_adductor
@@ -81,8 +88,9 @@ export const PRESCRIPTION = {
     // 仕様書④の X脚 行だけ種目に注記がある：「レッグエクステンション（VMOを意識）」。
     notes: { leg_extension: "VMOを意識" },
   },
-  // 仕様書に「正常」の行は無い。上下とも正常だった人に空のメニューを出すわけには
-  // いかないので、維持を目的とした基本メニューをこちらで定義する（仕様外の追加）。
+  // 仕様書④に「正常」の行は無いため、こちらで維持メニューを起こして先方に確認し、
+  // 2026-08-02 にこの内容で採用の回答を得た（正常姿勢の目的は「改善」ではなく「維持」）。
+  //   ラクレッチ：CHEST / HIP / TWISTER　筋トレ：ローイング / アブドミナル / ヒップスラスト
   MAINTENANCE: {
     stretch: ["stretch_chest", "stretch_hip", "stretch_twister"],
     strength: ["seated_row", "abdominal", "hip_thrust"],

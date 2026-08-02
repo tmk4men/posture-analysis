@@ -198,11 +198,12 @@ export const EXERCISE_ASSETS = [
     category: "strength",
     strengthens: ["adductors"],
     stretches: [] },
-  // カーフレイズはマシン写真の素材が未入手。image を持たないアセットは
-  // レポート側で文字だけのカードとして描画する（壊れた画像を出さない）。
+  // カーフレイズに専用マシンは無く、レクスコのレッグプレス／シーテッドレッグプレスで
+  // 「脚を伸ばした状態でつま先立ち」をして行う（先方確定・2026-08-02）。
+  // カードは scripts/build-machine-cards.py がシーテッドレッグプレスのカードから起こす。
   { id: "calf_raise",
     label: "カーフレイズ",
-    image: null,
+    image: DIR + "calf-raise.webp",
     category: "strength",
     strengthens: ["calves"],
     stretches: [] },
@@ -216,33 +217,35 @@ export const EXERCISE_ASSETS = [
     stretches: [] },
 
   // ───── ストレッチ ─────
+  // ラクレッチ5種は新型マシン（Rakuretch ロゴ入り）の写真に差し替え済み（2026-08-02）。
+  // カードは scripts/build-machine-cards.py が旧カードの写真部分だけ入れ替えて生成する。
   { id: "stretch_chest",
     label: "ラクレッチチェスト",
-    image: DIR + "083B22F6-0546-4098-AD74-4FA264A5FEF8.webp",
+    image: DIR + "rakuretch-chest.webp",
     category: "stretch",
     strengthens: [],
     stretches: ["pectorals", "anterior_deltoid", "biceps"] },
   { id: "stretch_shoulder",
     label: "ラクレッチショルダー",
-    image: DIR + "4EF4CA4C-AC1C-4CAD-AE5A-0DCC70C34776.webp",
+    image: DIR + "rakuretch-shoulder.webp",
     category: "stretch",
     strengthens: [],
     stretches: ["upper_traps", "posterior_deltoid", "scapular_stabilizers"] },
   { id: "stretch_twister",
     label: "ラクレッチツイスター",
-    image: DIR + "E723D8FF-A38A-4228-958B-BA8C48B35CE9.webp",
+    image: DIR + "rakuretch-twister.webp",
     category: "stretch",
     strengthens: [],
     stretches: ["obliques", "erector_spinae", "abdominals"] },
   { id: "stretch_hip",
     label: "ラクレッチヒップ",
-    image: DIR + "44A75005-F733-4B8E-87D0-7419C998DAED.webp",
+    image: DIR + "rakuretch-hip.webp",
     category: "stretch",
     strengthens: [],
     stretches: ["glutes", "hamstrings", "adductors"] },
   { id: "stretch_adductor",
     label: "ラクレッチアダクター",
-    image: DIR + "755699E9-0BE6-4002-B187-ECC14D9E1861.webp",
+    image: DIR + "rakuretch-adductor.webp",
     category: "stretch",
     strengthens: [],
     stretches: ["adductors", "hamstrings"] },

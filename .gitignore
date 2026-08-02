@@ -18,6 +18,12 @@ Thumbs.db
 scripts/asc/node_modules/
 scripts/asc/sales-*.tsv
 
+# 先方(UGOQ)から受領した資料。公開リポジトリに入れない
+IMG_2008.jpg
+レクスコマシン/
+UGOQ石巻店１階見取り図.pdf
+UGOQ石巻店２階見取り図.pdf
+
 # Local debug / scratch
 画像/
 参考画像/

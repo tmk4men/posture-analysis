@@ -212,6 +212,11 @@ export function renderReport({ findings, patient, photos }) {
       <div class="menu-step__head"><span class="menu-step__num">${num}</span>${escapeHtml(label)}</div>
       <div class="menu-step__detail">${escapeHtml(detail)}</div>
     </li>`;
+  // 上下とも正常だった人の目的は「姿勢改善」ではなく「姿勢維持」（先方確定・2026-08-02）。
+  const isMaintenance = posture?.menu?.balance === "maintenance";
+  const page2Lead = isMaintenance
+    ? "今の姿勢を保つための維持トレーニングメニュー"
+    : "姿勢チェックの結果に合わせた個別トレーニングメニュー";
   const cardStep = (num, label, cards) => `
     <li class="menu-step">
       <div class="menu-step__head"><span class="menu-step__num">${num}</span>${escapeHtml(label)}</div>
@@ -225,7 +230,7 @@ export function renderReport({ findings, patient, photos }) {
       <header class="report-head report-head--green">
         <div class="report-head__brand">POSTURA <span>Training Plan</span></div>
         <h1 class="report-head__title">本日のメニュー（${escapeHtml(freqLabel)}）</h1>
-        <p class="report-head__lead">姿勢チェックの結果に合わせた個別トレーニングメニュー</p>
+        <p class="report-head__lead">${escapeHtml(page2Lead)}</p>
       </header>
 
       <ol class="menu-steps">
