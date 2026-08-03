@@ -1,8 +1,14 @@
 # Postura ── 姿勢を、数字で診る。
 
-整骨院・整体院向けの簡易姿勢分析Webアプリ。患者の前後左右の写真から骨格を自動検出し、左右差や前後傾を数値化、**ルールベース（AI不使用）** で所見コメント・推奨筋肉・トレーニングメニューを自動生成します。
+整骨院・整体院向けの簡易姿勢分析Webアプリ。患者の前後左右の写真から骨格を自動検出し、左右差や前後傾を数値化、**ルールベース**で所見コメント・推奨筋肉・トレーニングメニューを自動生成します。
 
-所見文の生成ルールは [`DIAGNOSIS_RULEBOOK.md`](DIAGNOSIS_RULEBOOK.md)、トレーニング処方ルールは [`TRAINING_RULEBOOK.md`](TRAINING_RULEBOOK.md) を参照。
+骨格33点の検出だけは MediaPipe の学習済みモデルを使いますが、**推論は端末内で完結し、写真は外部に送りません**。判定・メニュー・所見文に生成AI（LLM）は使っておらず、同じ写真からは必ず同じレポートが出ます。
+
+ルールは3冊に分けて全部書いてあります。
+
+- [`UGOQ_RULEBOOK.md`](UGOQ_RULEBOOK.md) … 姿勢タイプの判定と本日のメニューの決め方（UGOQ仕様）
+- [`DIAGNOSIS_RULEBOOK.md`](DIAGNOSIS_RULEBOOK.md) … 所見文の生成ルール
+- [`TRAINING_RULEBOOK.md`](TRAINING_RULEBOOK.md) … 来院頻度ごとの回数 × セット
 
 公開URL: <https://tmk4men.github.io/posture-analysis/>
 
@@ -118,6 +124,7 @@ katsu姿勢分析/
   `src/ui/report.js` の `fitPage1ToA4()` が人体図を段階的に縮めて297mmに収めます。
   筋肉リストの表示数は `src/pose/recommend.js` の `MAX_MUSCLES_PER_LIST`（既定5）
 - **モデル変更**：`src/pose/detector.js` の `MODEL_URL`（lite / full / heavy の3種類）
+- **マシンのカード画像を作り直す**：`python scripts/build-machine-cards.py`（先方支給カードの写真部分だけを差し替える。詳細は `UGOQ_RULEBOOK.md` の4章）
 
 ## デプロイ時のキャッシュバスター
 
@@ -125,7 +132,7 @@ GitHub Pagesは静的アセットをブラウザに約10分キャッシュさせ
 
 ```bash
 ./scripts/bump-cache.sh   # app.html / index.html の ?v= を現在のUTC時刻に更新
-git add -A
+git add <変更したファイル>  # 公開リポジトリなので -A は使わない（先方資料の混入を防ぐ）
 git commit -m "release: bump assets"
 git push
 ```

@@ -6,7 +6,12 @@
 - 突き合わせテスト：`検証/ugoq-spec.test.mjs`（`node --test 検証/ugoq-spec.test.mjs`）
 - しきい値：`src/pose/thresholds.js`（`DIAGNOSIS_RULEBOOK.md` と共有）
 
-**最終更新**：2026-07-27
+> **テストの流し方**：`node --test 検証/*.test.mjs`（38件）。
+> **ディレクトリ指定の `node --test 検証/` は Windows で動かない**
+> （非ASCIIパスのため `MODULE_NOT_FOUND` になる。PowerShell・Git Bash とも同じ）。
+> 必ずグロブかファイル名で指定する。
+
+**最終更新**：2026-08-03
 
 ---
 
@@ -15,11 +20,28 @@
 | 仕様書 | 実装 |
 |---|---|
 | ① 姿勢分析マスター | `UPPER_TYPES` / `LOWER_TYPES`（姿勢名・判定項目・主な改善ポイントを原文どおり保持） |
-| ② ラクレッチマスター | `EXERCISE_ASSETS` の 5 種（CHEST / SHOULDER / TWISTER / HIP / ADDUCTOR） |
+| ② ラクレッチマスター（現「主な適応姿勢」） | `EXERCISE_ASSETS` の 5 種（CHEST / SHOULDER / TWISTER / HIP / ADDUCTOR）。**処方には使わない**（5章） |
 | ③ 筋力トレーニングマスター | `EXERCISE_ASSETS` の 12 種 |
-| ④ メニュー処方マスター | `PRESCRIPTION`（7行を種目・順番ごと保持） |
-| ⑤ メニュー生成ロジック STEP1〜8 | STEP1＝写真アップロード、STEP2〜8＝`analyzePosture()` |
+| ④ メニュー処方マスター（現「処方メニュー」） | `PRESCRIPTION`（7行を種目・順番ごと保持）。**アプリの正式マスターはここ** |
+| ⑤ メニュー生成ロジック STEP1〜8 | STEP1＝写真アップロード、STEP2〜8＝`analyzePosture()`（下の対応表） |
 | ⑥ ユーザー画面イメージ | レポート1ページ目の「姿勢分析結果」＋2ページ目の「本日のメニュー」 |
+
+### STEP と実装の対応
+
+| STEP | 内容 | 実装 |
+|---|---|---|
+| 1 | 写真アップロード（正面・側面） | `src/ui/` の取り込み → `detectPose()` |
+| 2 | 上半身タイプの判定 | `classifyUpper()` |
+| 3 | 下半身タイプの判定 | `classifyLower()` |
+| 4 | 上下の組み合わせ | `buildMenu()` |
+| 5 | ラクレッチ3種の決定 | `buildMenu()` の `stretch` |
+| 6 | 筋力トレーニング3種の決定 | `buildMenu()` の `strength` |
+| 7 | 有酸素運動（任意） | `CARDIO`（固定文言） |
+| 8 | クールダウン | `COOLDOWN`（固定文言） |
+
+レポート2ページ目はこの順に ①ウォーミングアップ（`WARMUP`）②ラクレッチ ③筋トレ
+④有酸素 ⑤クールダウン として描く（`src/ui/report.js`）。番号は仕様書の STEP ではなく
+利用者向けの通し番号なのでずれている。
 
 ---
 
@@ -27,6 +49,8 @@
 
 計測値（`src/pose/angles.js`）を臨床しきい値で割った **ratio** を求め、
 **1.0 以上のうち最大の候補**を採用する。1.0 を超えるものが無ければ正常（U1／L1）。
+分母（`WARN.*`）の実際の値は `src/pose/thresholds.js` にあり、下表の数字はその時点での値。
+**しきい値を変えたら下の表も直すこと**（表を見て実装を判断しない）。
 
 ### 上半身（側面写真）
 
@@ -34,7 +58,7 @@
 |---|---|---|
 | U2 猫背・巻き肩 | `shoulder_forward > 0` | `shoulder_forward ÷ 8` |
 | U3 前方頭位 | `forward_head > 0` | `forward_head ÷ 10` |
-| U4 フラットバック | `shoulder_forward < 0` かつ `forward_head < 10` | `\|shoulder_forward\| ÷ 8` |
+| U4 フラットバック | `shoulder_forward < 0` かつ `forward_head < WARN.forward_head` | `\|shoulder_forward\| ÷ 8` |
 | U1 正常 | 上記がどれも 1.0 未満 | — |
 
 ### 下半身（側面＋正面写真）
@@ -67,13 +91,16 @@
 
 | 状態 | 割り振り | `menu.balance` |
 |---|---|---|
-| 上半身の ratio が大きい | 上半身①② ＋ 下半身① | `upper_led` |
+| 上半身の ratio が大きい | 上半身①② ＋ 下半身から1種目（※） | `upper_led` |
 | 下半身の ratio が大きい | 下半身①② ＋ 上半身① | `lower_led` |
 | 上半身のみ崩れ | 上半身①②③ | `upper_only` |
 | 下半身のみ崩れ | 下半身①②③ | `lower_only` |
 | 上下とも正常 | 維持メニュー | `maintenance` |
 
+**ratio が同点なら上半身を優先**する（`upper.ratio >= lower.ratio`）。
 重複した種目は、優先側の次の候補で埋める（必ず3種目・重複なしになる）。
+
+※ 副側が下半身のときに採る1種目は、④の①とは限らない。次の規則が先に効く。
 
 ### 副側が下半身のときは下肢の種目を先に採る
 
@@ -83,10 +110,12 @@
 単純に①から採ると⑥と食い違う。
 
 そこで **下半身の処方から1種目だけ採るときは下肢の種目を先に見る**
-（`orderForSecondary()`）。④ の表そのものは一切書き換えていない。
+（`orderForSecondary()`。種目の部位分けは同ファイルの `REGION`）。
+④ の表そのものは一切書き換えていない。
 アブドミナルは体幹の種目で、上半身側から採った2種目と役割が重なりやすいという意味でも筋が通る。
-実際に順番が変わるのは **L2 を副側から1種目だけ採るとき** に限られ、
-L3・L4 は元から①が下肢種目なので影響しない。
+並べ替えはラクレッチ側にも同じように掛かるが、**採るのは先頭の1種目だけ**なので、
+**結果が変わるのは L2 を副側から1種目だけ採るときの筋トレ**（アブドミナル→ヒップスラスト）に限られる。
+L3・L4 は元から①が下肢種目で、先頭が動かない。
 
 この規則により ⑥ の例はそのまま再現される（`検証/ugoq-spec.test.mjs` で固定）。
 
@@ -185,4 +214,9 @@ L3・L4 は元から①が下肢種目なので影響しない。
 | ウォーミングアップ・有酸素・クールダウンの文言 | `postureTypes.js` の `WARMUP` / `CARDIO` / `COOLDOWN` |
 | レポートの見た目 | `src/ui/report.js` の `postureResultHtml()` と page2、`app.css` |
 
-いずれも編集後は `node --test 検証/` を通し、deploy 前に `./scripts/bump-cache.sh` を実行すること。
+いずれも編集後は `node --test 検証/*.test.mjs` を通し、
+deploy 前に `./scripts/bump-cache.sh` を実行すること（`検証/` のディレクトリ指定は
+Windows では動かない。冒頭の注記を参照）。
+
+**回数 × セット**（週1〜5回）は UGOQ 仕様の外側で、`recommend.js` の
+`PRESCRIPTION_BY_FREQUENCY` と `TRAINING_RULEBOOK.md` が担当する。姿勢タイプでは変わらない。
