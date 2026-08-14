@@ -294,28 +294,58 @@ function onResetPainAreas() {
     .forEach((el) => { el.checked = false; });
 }
 
+// 撮影日の初期値。
+// input.valueAsDate は使わない。理由は2つ。
+//   1) date入力をサポートしない環境（type が text に落ちる）では setter が
+//      InvalidStateError を投げ、init() ごと落ちて画面が全部死ぬ。
+//   2) valueAsDate は UTC 基準なので、日本時間の朝9時前は前日の日付が入る。
+// ローカル時刻から YYYY-MM-DD を組み立てて value に入れる。
+function todayLocalISO() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 初期化の1ステップが落ちても残りを続ける。
+// 1箇所の例外で「チップが出ない・写真が選べない」と画面全体が無反応になるのを防ぐ。
+function step(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.error(`[init] ${label} に失敗:`, err);
+  }
+}
+
 async function init() {
   await requireAuth();
 
   // ネイティブ（iOS/Apple課金）からの購入確定を受け取る経路を用意。
   // 購入のタイムラグで結果が遅れて届いても、後から確実に解除できるようにする。
-  initEntitlementBridge();
+  step("課金ブリッジ", initEntitlementBridge);
 
   // iOSアプリ内なら RevenueCat を初期化（購入・復元・権利同期）。ブラウザでは何もしない。
-  initIap();
+  step("IAP初期化", initIap);
 
-  document.getElementById("patient-date").valueAsDate = new Date();
-  renderPainAreaChips();
+  step("撮影日の初期値", () => {
+    const dateEl = document.getElementById("patient-date");
+    if (dateEl) dateEl.value = todayLocalISO();
+  });
+  step("痛み部位チップ", renderPainAreaChips);
 
   for (const view of VIEWS) {
-    setupUpload(view, handleImage);
+    step(`${viewLabel(view)}のアップロード`, () => setupUpload(view, handleImage));
   }
 
-  document.getElementById("analyze-btn").addEventListener("click", onAnalyze);
-  document.getElementById("reset-btn").addEventListener("click", onReset);
-  document.getElementById("print-btn").addEventListener("click", triggerPrint);
+  step("ボタンの配線", () => {
+    document.getElementById("analyze-btn").addEventListener("click", onAnalyze);
+    document.getElementById("reset-btn").addEventListener("click", onReset);
+    document.getElementById("print-btn").addEventListener("click", triggerPrint);
+  });
 
-  setupCarouselTracking();
+  step("カルーセル", setupCarouselTracking);
+
+  // app.html の保険スクリプトへ「ここまで来た」と伝える。
+  window.__posturaReady = true;
 
   setStatus("MediaPipe モデルを読み込み中…");
   warmup()
@@ -326,4 +356,13 @@ async function init() {
     });
 }
 
-init();
+// 初期化が丸ごと落ちた場合、これまでは画面が無言で無反応になり
+// 「使えない」以上の情報が残らなかった。原因を画面に出す。
+init().catch((err) => {
+  console.error(err);
+  try {
+    setStatus(`初期化エラー: ${err?.message ?? err}`);
+  } catch {
+    /* setStatus すら使えないほど壊れている場合は諦める */
+  }
+});

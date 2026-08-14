@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="POSTURA" />
 
-  <link rel="stylesheet" href="app.css?v=20260802-1303" />
+  <link rel="stylesheet" href="app.css?v=20260814-1519" />
 </head>
 <body>
   <dialog id="auth-dialog" class="auth-dialog">
@@ -148,7 +148,34 @@
     </section>
   </main>
 
-  <script type="module" src="src/main.js?v=20260802-1303"></script>
+  <!-- 起動できなかったときに原因を画面に出す保険。
+       モジュールの読み込み自体が失敗すると main.js の中の catch も動かず、
+       これまでは真っ白・無反応で「使えない」以外の情報が残らなかった。 -->
+  <script>
+    (function () {
+      var firstError = null;
+      window.addEventListener("error", function (e) {
+        if (!firstError) firstError = e.message || String(e.error || "");
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        if (!firstError) firstError = (e.reason && e.reason.message) || String(e.reason || "");
+      });
+      window.addEventListener("load", function () {
+        setTimeout(function () {
+          if (window.__posturaReady) return;
+          var el = document.getElementById("status-text");
+          if (!el) return;
+          el.textContent =
+            "起動できませんでした" +
+            (firstError ? "（" + firstError + "）" : "") +
+            "。ページを再読み込みしても直らない場合はこの文言をお知らせください。";
+          el.style.color = "#b3261e";
+        }, 8000);
+      });
+    })();
+  </script>
+
+  <script type="module" src="src/main.js?v=20260814-1519"></script>
   <script>
     // PWA: サービスワーカー登録（オフライン起動・モデルキャッシュ）
     if ("serviceWorker" in navigator) {
