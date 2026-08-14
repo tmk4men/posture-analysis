@@ -357,6 +357,7 @@ button {
 
 .dropzone {
   display: block;
+  position: relative;
   padding: 1.6rem 1rem;
   border: 1.5px dashed var(--border-strong);
   border-radius: 8px;
@@ -373,7 +374,19 @@ button {
   color: var(--primary);
   background: linear-gradient(180deg, #f5fbfa, #ecf5f3);
 }
-.dropzone input { display: none; }
+/* display:none にすると、環境によってはラベル経由でファイル選択が開かないことがある。
+   見た目上は消したまま、要素としては生かしておく。 */
+.dropzone input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
 .dropzone.has-image { display: none; }
 
 .canvas-wrap {

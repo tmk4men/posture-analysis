@@ -1,37 +1,18 @@
-// Cache-buster: propagate the ?v=... query string from this module's URL
-// to every dynamic import below. Bumped via scripts/bump-cache.sh on each
-// release so visitors always get fresh JS after a deploy.
-const V = new URL(import.meta.url).search;
-
-const [
-  detectorMod,
-  anglesMod,
-  uploadMod,
-  overlayMod,
-  reportMod,
-  recommendMod,
-  authMod,
-  paywallMod,
-  iapMod,
-] = await Promise.all([
-  import("./pose/detector.js" + V),
-  import("./pose/angles.js" + V),
-  import("./ui/upload.js" + V),
-  import("./ui/overlay.js" + V),
-  import("./ui/report.js" + V),
-  import("./pose/recommend.js" + V),
-  import("./ui/auth.js" + V),
-  import("./ui/paywall.js" + V),
-  import("./ui/iap.js" + V),
-]);
-const { detectPose, warmup } = detectorMod;
-const { computeMetrics, summarizeAll, checkCapture } = anglesMod;
-const { setupUpload, resetUpload } = uploadMod;
-const { drawPoseOnCanvas, renderMetrics, renderCaptureNotes } = overlayMod;
-const { renderReport, renderRawSummary, setStatus, triggerPrint } = reportMod;
-const { PAIN_AREA_OPTIONS, deriveRecommendations } = recommendMod;
-const { requireAuth } = authMod;
-const {
+// キャッシュバスター付きの静的 import。?v= は scripts/bump-cache.sh が
+// リリースごとに全ソースを一括で書き換える。
+//
+// 動的 import + トップレベル await は使わない。トップレベル await は
+// Safari 15（iOS 15）以降にしか無く、それより古い端末ではファイル自体が
+// 構文エラーになってアプリが丸ごと読み込まれない。画面には何も出ないので
+// 「写真も選べない・痛み部位も出ない」という症状だけが残る。
+import { detectPose, warmup } from "./pose/detector.js?v=20260814-1539";
+import { computeMetrics, summarizeAll, checkCapture } from "./pose/angles.js?v=20260814-1539";
+import { setupUpload, resetUpload } from "./ui/upload.js?v=20260814-1539";
+import { drawPoseOnCanvas, renderMetrics, renderCaptureNotes } from "./ui/overlay.js?v=20260814-1539";
+import { renderReport, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js?v=20260814-1539";
+import { PAIN_AREA_OPTIONS, deriveRecommendations } from "./pose/recommend.js?v=20260814-1539";
+import { requireAuth } from "./ui/auth.js?v=20260814-1539";
+import {
   canGenerateReport,
   recordReport,
   remainingReports,
@@ -40,8 +21,8 @@ const {
   renderLimitReached,
   initEntitlementBridge,
   isPro,
-} = paywallMod;
-const { initIap } = iapMod;
+} from "./ui/paywall.js?v=20260814-1539";
+import { initIap } from "./ui/iap.js?v=20260814-1539";
 
 const VIEWS = ["front", "right"];
 
@@ -356,13 +337,17 @@ async function init() {
     });
 }
 
-// 初期化が丸ごと落ちた場合、これまでは画面が無言で無反応になり
+// 起動が丸ごと落ちた場合、これまでは画面が無言で無反応になり
 // 「使えない」以上の情報が残らなかった。原因を画面に出す。
+// setStatus 自体が読み込めていない可能性があるので、DOM に直接書く経路を持つ。
+function showFatal(message) {
+  console.error(message);
+  const el = document.getElementById("status-text");
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = "#b3261e";
+}
+
 init().catch((err) => {
-  console.error(err);
-  try {
-    setStatus(`初期化エラー: ${err?.message ?? err}`);
-  } catch {
-    /* setStatus すら使えないほど壊れている場合は諦める */
-  }
+  showFatal(`起動エラー: ${(err && err.message) || err}`);
 });

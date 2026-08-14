@@ -14,8 +14,7 @@
 //
 // しきい値は thresholds.js（単一の真実源）。計測値は angles.js が返すキーを使う。
 
-const V = new URL(import.meta.url).search;
-const { WARN, getMetric } = await import("./thresholds.js" + V);
+import { WARN, getMetric } from "./thresholds.js?v=20260814-1539";
 
 // 逸脱がこの倍率（＝臨床しきい値ちょうど）を超えたときだけ「崩れている」と判定する。
 // 超えるものが1つも無ければ U1／L1（正常）。

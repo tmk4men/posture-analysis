@@ -11,8 +11,10 @@
 // both. Each per-leg lower-body muscle therefore has separate _MALE / _FEMALE
 // path constants tracing the actual silhouette of each figure.
 
+import { MUSCLES } from "../data/muscles.js?v=20260814-1539";
+
+// 画像URLに付けるキャッシュバスター。自分の URL の ?v= をそのまま引き継ぐ。
 const V = new URL(import.meta.url).search;
-const { MUSCLES } = await import("../data/muscles.js" + V);
 
 // Colours
 const COLOR_WEAK = "#3b8a4f"; // green — 鍛えるべき筋肉

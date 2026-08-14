@@ -5,17 +5,10 @@
 // ラクレッチ3・筋トレ3にする（実装は postureTypes.js）。
 // 人体図に出す弱化筋・短縮筋は、従来どおり計測値と申告部位から積み上げる。
 
-const V = new URL(import.meta.url).search;
-const [musclesMod, thresholdsMod, diagnosisMod, typesMod] = await Promise.all([
-  import("../data/muscles.js" + V),
-  import("./thresholds.js" + V),
-  import("./diagnosis.js" + V),
-  import("./postureTypes.js" + V),
-]);
-const { MUSCLE_BY_ID } = musclesMod;
-const { WARN, KNEE, ENTRY_RATIO, getMetric } = thresholdsMod;
-const { buildDiagnosis } = diagnosisMod;
-const { analyzePosture } = typesMod;
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260814-1539";
+import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260814-1539";
+import { buildDiagnosis } from "./diagnosis.js?v=20260814-1539";
+import { analyzePosture } from "./postureTypes.js?v=20260814-1539";
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
 // Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s

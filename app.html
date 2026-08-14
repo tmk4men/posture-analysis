@@ -15,7 +15,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="POSTURA" />
 
-  <link rel="stylesheet" href="app.css?v=20260814-1526" />
+  <link rel="stylesheet" href="app.css?v=20260814-1539" />
 </head>
 <body>
   <dialog id="auth-dialog" class="auth-dialog">
@@ -168,14 +168,15 @@
           el.textContent =
             "起動できませんでした" +
             (firstError ? "（" + firstError + "）" : "") +
-            "。ページを再読み込みしても直らない場合はこの文言をお知らせください。";
+            "。この画面をそのまま撮って送ってください。 " +
+            navigator.userAgent;
           el.style.color = "#b3261e";
         }, 8000);
       });
     })();
   </script>
 
-  <script type="module" src="src/main.js?v=20260814-1526"></script>
+  <script type="module" src="src/main.js?v=20260814-1539"></script>
   <script>
     // PWA: サービスワーカー登録（オフライン起動・モデルキャッシュ）
     if ("serviceWorker" in navigator) {

@@ -1,5 +1,4 @@
-const V = new URL(import.meta.url).search;
-const { LM } = await import("../pose/angles.js" + V);
+import { LM } from "../pose/angles.js?v=20260814-1539";
 
 // Skeleton edges drawn on canvas (subset that is visually meaningful).
 const EDGES = [
