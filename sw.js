@@ -9,7 +9,10 @@
 //
 // キャッシュ名を上げると（例: v1 -> v2）activate 時に旧キャッシュを一掃する。
 
-const CORE = "postura-core-v1";
+// CORE はリリースのたびに上げる（古いアプリシェルを確実に捨てる）。
+// RUNTIME は据え置き。ここには MediaPipe のモデル（約30MB）が入っていて、
+// 名前を変えると全員が再ダウンロードになる。中身は不変なので捨てる理由がない。
+const CORE = "postura-core-v2";
 const RUNTIME = "postura-runtime-v1";
 
 // インストール時に確実に持っておきたい最小シェル（?v= を付けない素のパス）。
