@@ -12,7 +12,7 @@
 //   - 申告された不調部位があれば必ず1つ触れる。
 //   - 最後に週N回の頻度を反映した前向きな見通しを添える。
 
-import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260814-1539";
+import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260814-1548";
 
 function clampFrequency(weeklyFrequency) {
   return Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));

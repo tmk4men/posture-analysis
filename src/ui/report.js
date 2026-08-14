@@ -8,10 +8,10 @@
 //   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260814-1539";
-import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260814-1539";
-import { renderAnatomyPanel } from "./anatomy.js?v=20260814-1539";
-import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260814-1539";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260814-1548";
+import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260814-1548";
+import { renderAnatomyPanel } from "./anatomy.js?v=20260814-1548";
+import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260814-1548";
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -60,7 +60,10 @@ function trainingCardHtml(plan, rx) {
   // 画像素材が未入手のマシン（カーフレイズ等）は壊れた画像を出さず、
   // 種目名だけのカードにする。素材を足せば自動で写真つきに戻る。
   const visual = asset.image
-    ? `<img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}" loading="lazy">`
+    // loading="lazy" は付けない。画面をいちばん下までスクロールしないまま印刷すると
+    // 画像が読み込まれておらず、紙のトレーニング面が空欄で出る。
+    // レポートは「解析結果」を押した後にしか描かれないので、先読みしても無駄がない。
+    ? `<img class="training-card__img" src="${escapeHtml(asset.image)}" alt="${escapeHtml(asset.label)}">`
     : `<div class="training-card__noimg">${escapeHtml(asset.label)}</div>`;
   return `
     <li class="training-card">
@@ -290,6 +293,25 @@ export function setStatus(text) {
   document.getElementById("status-text").textContent = text;
 }
 
-export function triggerPrint() {
+// 印刷。画像の読み込みが終わってからダイアログを出す。
+// 終わる前に window.print() を呼ぶと、その時点で未取得の画像が紙で空欄になる。
+export async function triggerPrint() {
+  const container = document.getElementById("summary-output");
+  const imgs = container ? [...container.querySelectorAll("img")] : [];
+  const pending = imgs.filter((i) => !i.complete || i.naturalWidth === 0);
+  if (pending.length) {
+    await Promise.all(
+      pending.map(
+        (img) =>
+          new Promise((resolve) => {
+            // 読み込めない画像で印刷を止めない。上限2秒で諦めて進む。
+            const done = () => resolve();
+            img.addEventListener("load", done, { once: true });
+            img.addEventListener("error", done, { once: true });
+            setTimeout(done, 2000);
+          }),
+      ),
+    );
+  }
   window.print();
 }

@@ -19,7 +19,7 @@
 // import の ?v= は scripts/bump-cache.sh がリリースごとに書き換える。
 // 動的 import + トップレベル await は使わない（Safari 15 未満で構文エラーになり、
 // アプリ全体が読み込まれなくなる）。
-import { WARN, KNEE, VISIBILITY_FLOOR, CAPTURE } from "./thresholds.js?v=20260814-1539";
+import { WARN, KNEE, VISIBILITY_FLOOR, CAPTURE } from "./thresholds.js?v=20260814-1548";
 
 // MediaPipe Pose 33 landmark indices (subset we use)
 export const LM = {

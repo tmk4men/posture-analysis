@@ -1,14 +1,20 @@
-// 無料プランのゲート（Web版）。
+// 課金ゲート。**iOSアプリの中でだけ効く。**
 //
-// 方針：Web版は「無料お試し」の入口。本気で使う院は有料版（iOSアプリ／Apple課金）へ誘導する。
-//   - レポート生成は 1か月あたり FREE_MONTHLY_REPORTS 件までに制限（かなり絞る）。
-//   - トレーニングページ（レポート2枚目）は無料だとブラーで隠し、アップグレード導線を重ねる。
+// Web版（GitHub Pages）は透かしも上限も出さず、全機能をそのまま使える。
+// ゲートが動くのは Capacitor で包んだ iOSアプリの中だけで、そこは Apple課金で
+// 解除する。判定は platform.js の isNativeApp() 一本。
 //
-// ここでは課金処理は行わない（購入は iOSアプリ側）。アップグレードは UPGRADE_URL へ送るだけ。
-// オーナーが自端末で解除・確認したい場合はコンソールで  window.__posturaSetPro(true)
+// アプリ内での挙動：
+//   - レポート生成は 1か月あたり FREE_MONTHLY_REPORTS 件まで。
+//   - トレーニングページ（レポート2枚目）はブラーで隠し、アップグレード導線を重ねる。
 //
-// 注意：このゲートは開発者ツールから突破可能なクライアント側の緩い制御。売上の要は iOS の
-// Apple課金側で担保する前提。ここは「無料で軽く試せる／有料の価値を見せる」ための funnel。
+// ここでは課金処理は行わない（購入は iap.js）。オーナーが自端末で解除・確認したい
+// 場合はコンソールで  window.__posturaSetPro(true)
+//
+// 注意：このゲートは開発者ツールから突破可能なクライアント側の緩い制御。売上の要は
+// Apple課金側で担保する前提。
+
+import { isNativeApp } from "./platform.js?v=20260814-1548";
 
 const PRO_KEY = "posture_pro_v1";
 const USAGE_KEY = "posture_report_usage_v1";
@@ -19,7 +25,14 @@ export const FREE_MONTHLY_REPORTS = 3;
 // アップグレード先。TODO: App Store の実URL（有料iOSアプリ）に差し替える。
 export const UPGRADE_URL = "./";
 
+// 課金ゲートを適用する対象か。iOSアプリの中だけ true。
+export function isPaywallActive() {
+  return isNativeApp();
+}
+
 export function isPro() {
+  // Web版はゲート自体が無い。常に「解除済み」として扱う。
+  if (!isPaywallActive()) return true;
   try {
     return localStorage.getItem(PRO_KEY) === "1";
   } catch {
