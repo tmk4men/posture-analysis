@@ -1,4 +1,4 @@
-import { LM } from "../pose/angles.js?v=20260814-1548";
+import { LM } from "../pose/angles.js?v=20260909-0537";
 
 // Skeleton edges drawn on canvas (subset that is visually meaningful).
 const EDGES = [

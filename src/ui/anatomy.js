@@ -11,7 +11,8 @@
 // both. Each per-leg lower-body muscle therefore has separate _MALE / _FEMALE
 // path constants tracing the actual silhouette of each figure.
 
-import { MUSCLES } from "../data/muscles.js?v=20260814-1548";
+import { MUSCLES } from "../data/muscles.js?v=20260909-0537";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0537";
 
 // 画像URLに付けるキャッシュバスター。自分の URL の ?v= をそのまま引き継ぐ。
 const V = new URL(import.meta.url).search;
@@ -59,7 +60,7 @@ const BACK_LABEL_ANCHORS = {
   scapular_stabilizers:  { anchorX: 295, anchorY: 320, labelX: 374, labelY: 320, align: "start" },
   lats:                  { anchorX: 130, anchorY: 445, labelX: 70,  labelY: 440, align: "end"   },
   triceps:               { anchorX: 345, anchorY: 400, labelX: 374, labelY: 400, align: "start" },
-  erector_spinae:        { anchorX: 222, anchorY: 480, labelX: 70,  labelY: 480, align: "end"   },
+  erector_spinae:        { anchorX: 222, anchorY: 480, labelX: 70,  labelY: 505, align: "end"   },
   glutes:                { anchorX: 295, anchorY: 635, labelX: 374, labelY: 635, align: "start" },
   gluteus_medius:        { anchorX: 125, anchorY: 590, labelX: 70,  labelY: 590, align: "end"   },
   hamstrings:            { anchorX: 295, anchorY: 800, labelX: 374, labelY: 800, align: "start" },
@@ -378,6 +379,13 @@ const BACK_MUSCLES_LOWER_FEMALE = `
 // Build callout-label SVG markup for the highlighted muscles only.  Labels
 // sit beside the figure with a thin leader line pointing back to the muscle,
 // so the patient can read both the colour and the name at a glance.
+//
+// viewBox 単位。人体図は A4 の中で 1/5.6 程度に縮んで描かれるので、
+// ここを小さくすると紙の上で完全に読めなくなる（14px だと約 0.7mm だった）。
+const LABEL_FS = 34;
+const LABEL_H = 46;
+const LABEL_PAD = 7;
+
 function buildLabels(anchors, weakSet, tightSet, opts = {}) {
   const { gender = "male" } = opts;
   const lines = [];
@@ -389,7 +397,10 @@ function buildLabels(anchors, weakSet, tightSet, opts = {}) {
 
     const def = MUSCLES.find((m) => m.id === muscleId);
     if (!def) continue;
-    const text = def.label;
+    // 図の中は「首」「太ももの後ろ」など一般語だけにする。人体図はA4の中で
+    // 幅80px程度にしか描けず、筋肉名を入れると字が潰れて誰も読めない。
+    // 解剖学の筋肉名は下の表（muscle-card）で部位名と並べて出している。
+    const text = bodyPart(def.bodyPart).plain;
 
     let anchorX = pos.anchorX;
     let anchorY = pos.anchorY;
@@ -397,15 +408,18 @@ function buildLabels(anchors, weakSet, tightSet, opts = {}) {
       anchorX += FEMALE_ANCHOR_DX[muscleId];
     }
 
+    // 日本語はほぼ全角なので 1文字 = LABEL_FS でだいたい合う。
+    const boxW = text.length * LABEL_FS + LABEL_PAD * 2;
+
     lines.push(`
       <g class="muscle-label muscle-label--${role}">
         <line class="muscle-label__leader"
               x1="${anchorX}" y1="${anchorY}"
               x2="${pos.labelX}"  y2="${pos.labelY}"/>
         <rect class="muscle-label__bg"
-              x="${pos.align === "end" ? pos.labelX - 150 : pos.labelX - 4}"
-              y="${pos.labelY - 16}"
-              width="154" height="26" rx="6" ry="6"/>
+              x="${pos.align === "end" ? pos.labelX - boxW + LABEL_PAD : pos.labelX - LABEL_PAD}"
+              y="${pos.labelY - LABEL_H / 2}"
+              width="${boxW}" height="${LABEL_H}" rx="10" ry="10"/>
         <text class="muscle-label__text"
               x="${pos.labelX}" y="${pos.labelY}"
               text-anchor="${pos.align}">${escapeXml(text)}</text>

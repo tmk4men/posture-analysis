@@ -7,7 +7,7 @@
 // パスワード変更：APP_PASSWORD_HASH を新しい値の SHA-256（16進）に置き換える。
 //   $ printf '%s' 'new-password' | sha256sum
 
-import { isNativeApp } from "./platform.js?v=20260814-1548";
+import { isNativeApp } from "./platform.js?v=20260909-0537";
 
 const APP_PASSWORD_HASH =
   "7291f4ae95ae77fdfd3074d9a7a7dbc05579e1c15622421547cb6cfa9d013c3d"; // sha256("seikotu")

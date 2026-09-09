@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+  レポート1ページ目を実データ（fixtures/real-photos.json）で描いて目視・自動確認するページ。
+  写真の読み込みや MediaPipe を通さずに、レイアウトと文言だけを速く確かめられる。
+
+    python -m http.server 8765     # リポジトリ直下で
+    http://127.0.0.1:8765/検証/report-preview.html
+
+  クエリ
+    ?worst=1  … 1列5件（MAX_MUSCLES_PER_LIST）を最も長い文言で埋めた最悪ケース
+    ?all=1    … 全19筋肉（実際には出ない。人体図の吹き出しの重なり確認用）
+    ?empty=1  … 筋肉が1件も選ばれなかったとき
+    ?pain=neck,lowback,...   ?gender=male|female   ?name=...
+-->
+<html lang="ja"><head><meta charset="utf-8">
+<title>レポート1ページ目のプレビュー</title>
+<!-- anatomy.js / exerciseAssets.js が "assets/..." を文書からの相対パスで参照するので、
+     基準をリポジトリ直下（app.html と同じ位置）に合わせる。この1枚は本番に出さない。 -->
+<base href="../">
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="app-body">
+<main class="app-main">
+  <section class="summary-section">
+    <div id="status-text" hidden></div>
+    <div id="summary-output" class="summary-output"></div>
+  </section>
+</main>
+<script type="module">
+const V = new URLSearchParams(location.search);
+const { computeMetrics, summarizeAll } = await import("./src/pose/angles.js");
+const { deriveRecommendations } = await import("./src/pose/recommend.js");
+const { renderReport } = await import("./src/ui/report.js");
+
+const REAL = await (await fetch("./検証/fixtures/real-photos.json")).json();
+const metricsByView = {};
+for (const view of ["front", "right"]) {
+  const f = REAL[view];
+  if (!f) continue;
+  metricsByView[view] = computeMetrics(f.landmarks, view, f.imageSize);
+}
+const summary = summarizeAll(metricsByView);
+const painAreas = (V.get("pain") ?? "neck,lowback").split(",").filter(Boolean);
+const findings = deriveRecommendations(summary, painAreas, 2);
+if (V.get("all")) {
+  const { MUSCLES } = await import("./src/data/muscles.js");
+  findings.weakMuscles = MUSCLES.map((m) => ({ id: m.id }));
+  findings.tightMuscles = MUSCLES.map((m) => ({ id: m.id }));
+}
+if (V.get("worst")) {
+  // 実際に出うる最大量：1列5件（MAX_MUSCLES_PER_LIST）を、部位名＋筋肉名＋注記が
+  // いちばん長くなる組み合わせで埋める。
+  const { MUSCLES } = await import("./src/data/muscles.js");
+  const { bodyPartLabel } = await import("./src/data/bodyParts.js");
+  const len = (m, k) => (bodyPartLabel(m.bodyPart) + m.label + m[k]).length;
+  const pick = (k) => [...MUSCLES].sort((a, b) => len(b, k) - len(a, k)).slice(0, 5)
+    .map((m) => ({ id: m.id, note: m[k] }));
+  findings.weakMuscles = pick("weakNote");
+  findings.tightMuscles = pick("tightNote");
+}
+if (V.get("empty")) { findings.weakMuscles = []; findings.tightMuscles = []; }
+window.__findings = findings;
+renderReport({
+  findings,
+  patient: { name: V.get("name") ?? "山田 太郎", date: "2026-09-08",
+             gender: V.get("gender") ?? "female", painAreas },
+  photos: null,
+});
+document.body.dataset.ready = "1";
+</script>
+</body></html>

@@ -864,7 +864,8 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   opacity: 0.92;
 }
 .muscle-label__text {
-  font-size: 14px;
+  /* viewBox 単位。anatomy.js の LABEL_FS と揃える。 */
+  font-size: 34px;
   font-family: inherit;
   font-weight: 600;
   fill: #1f2a36;
@@ -906,8 +907,32 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   border-radius: 4px;
   padding: 0.26rem 0.5rem;
 }
-.muscle-card__label { font-weight: 600; font-size: 9.5pt; color: #1f2a36; }
-.muscle-card__note  { font-size: 8.8pt; color: #5a6878; margin-top: 0.08rem; line-height: 1.4; }
+/* 1行目は「部位名（専門名） 筋肉名」。患者さんが最初に読むのは部位名なので、
+   部位名を先頭のチップに置き、色は先方の部位色分け図と同じ色にしている
+   （--part-tint / --part-accent は report.js が筋肉ごとに差し込む）。 */
+.muscle-card__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.34rem;
+}
+.muscle-card__part {
+  font-weight: 700;
+  font-size: 9.5pt;
+  color: #1f2a36;
+  background: var(--part-tint, #eee);
+  border: 1px solid var(--part-accent, #999);
+  border-radius: 999px;
+  padding: 0.02rem 0.36rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  /* 部位の色分けが本体なので、印刷でも背景を落とさない。 */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.muscle-card__part-formal { font-weight: 600; font-size: 7.6pt; }
+.muscle-card__muscle { font-size: 8.8pt; font-weight: 600; color: #5a6878; }
+.muscle-card__note  { font-size: 8.8pt; color: #5a6878; margin-top: 0.1rem; line-height: 1.4; }
 .muscle-card--weak  { border-left: 3px solid #3b8a4f; }
 .muscle-card--tight { border-left: 3px solid #d97a26; }
 .muscle-card--empty { color: var(--muted); text-align: center; padding: 0.5rem; }

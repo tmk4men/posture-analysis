@@ -89,6 +89,11 @@ katsu姿勢分析/
 ├── README.md               # このファイル
 └── src/
     ├── main.js             # 全体フロー制御
+    ├── data/
+    │   ├── muscles.js      # 筋肉カタログ（筋肉名・部位ID・弱化/短縮時の注記）
+    │   ├── bodyParts.js    # 部位カタログ（首＝頚部…／先方の色分け図の表記と色）
+    │   ├── exerciseAssets.js # 種目カードの画像
+    │   └── machines.js     # マシン一覧
     ├── pose/
     │   ├── detector.js     # MediaPipe Pose初期化と推論
     │   ├── angles.js       # ランドマーク→角度計算・撮影チェック
@@ -99,11 +104,13 @@ katsu姿勢分析/
     └── ui/
         ├── upload.js       # 写真アップロードUI
         ├── overlay.js      # Canvas骨格描画・計測値表示・撮影チェック表示
+        ├── anatomy.js      # 人体図のハイライトと部位名の吹き出し
         └── report.js       # 所見レンダリングと印刷
 検証/
 ├── geometry.test.mjs       # 幾何計算と所見文の自動テスト（node --test）
 ├── ugoq-spec.test.mjs      # UGOQ仕様書との突き合わせテスト
 ├── probe.html              # 実写を通して計測値を目視確認するページ
+├── report-preview.html     # レポート1ページ目を実データで描いて目視確認するページ
 └── fixtures/
     └── real-photos.json    # 実写2枚の landmark（回帰テスト用の固定データ）
 ```
@@ -120,6 +127,11 @@ katsu姿勢分析/
 - **所見文の言い回し・ルール変更**：`src/pose/diagnosis.js`（詳細は `DIAGNOSIS_RULEBOOK.md`）
 - **検出感度（しきい値）変更**：`src/pose/thresholds.js`（所見文と筋肉選定に同時反映）
 - **印刷レイアウト調整**：`app.css` の `@media print` セクション
+- **部位名・部位の色を変える**：`src/data/bodyParts.js`（表記は先方の色分け図が正。
+  変えたら `node --test "検証/*.test.mjs"` が図とのズレを検出します）。
+  どの筋肉がどの部位かは `src/data/muscles.js` の `bodyPart`
+- **レポートの見た目を確認する**：`python -m http.server 8765` の後
+  `http://127.0.0.1:8765/検証/report-preview.html`（`?worst=1` で最大量、`?empty=1` で空）
 - **A4に収まる仕組み**：レポート1ページ目は申告部位の数や所見文の長さで高さが変わるため、
   `src/ui/report.js` の `fitPage1ToA4()` が人体図を段階的に縮めて297mmに収めます。
   筋肉リストの表示数は `src/pose/recommend.js` の `MAX_MUSCLES_PER_LIST`（既定5）

@@ -8,10 +8,11 @@
 //   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260814-1548";
-import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260814-1548";
-import { renderAnatomyPanel } from "./anatomy.js?v=20260814-1548";
-import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260814-1548";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0537";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0537";
+import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0537";
+import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0537";
+import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0537";
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -42,13 +43,19 @@ function pickPhotoDataUrl(canvasDataUrls) {
   return { url: null, view: null };
 }
 
+// 患者さんが読む面なので、解剖学の筋肉名より先に部位名を出す（整骨院の要望・2026-09-09）。
+// チップの色は先方の部位色分け図と同じ色にしてあるので、図と表を色で突き合わせられる。
 function muscleCardHtml(item, role) {
   const def = MUSCLE_BY_ID[item.id];
   if (!def) return "";
+  const part = bodyPart(def.bodyPart);
   const note = item.note || (role === "weak" ? def.weakNote : def.tightNote);
   return `
-    <li class="muscle-card muscle-card--${role}">
-      <div class="muscle-card__label">${escapeHtml(def.label)}</div>
+    <li class="muscle-card muscle-card--${role}" style="--part-accent:${part.accent};--part-tint:${part.tint}">
+      <div class="muscle-card__head">
+        <span class="muscle-card__part">${escapeHtml(part.plain)}<span class="muscle-card__part-formal">（${escapeHtml(part.formal)}）</span></span>
+        <span class="muscle-card__muscle">${escapeHtml(def.label)}</span>
+      </div>
       <div class="muscle-card__note">${escapeHtml(note)}</div>
     </li>
   `;

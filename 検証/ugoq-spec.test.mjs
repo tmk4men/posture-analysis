@@ -364,3 +364,64 @@ test("実写2枚：前方頭位 × スウェイバックと判定され、メニ
   // 同じ入力なら必ず同じメニュー
   assert.deepEqual(analyzePosture(byView).menu, posture.menu);
 });
+
+// ---- 部位名（先方の色分け図 IMG_3130 前面 / IMG_3131 後面） -----------------
+// 整骨院からの要望（2026-09-09）で、レポートの筋肉リストは解剖学の筋肉名より先に
+// 一般の方が分かる部位名を出す。表記は先方の図をそのまま書き写したものなので、
+// ここが落ちたら「図と表で言葉が違う」状態になっている。
+
+const SPEC_BODY_PARTS = [
+  ["neck", "首", "頚部"],
+  ["shoulder", "肩", "肩部"],
+  ["upperarm", "二の腕", "上腕部"],
+  ["elbow", "ひじ", "肘部"],
+  ["forearm", "ひじ下", "前腕部"],
+  ["chest", "胸", "胸部"],
+  ["abdomen", "お腹", "腹部"],
+  ["back", "背中", "背部"],
+  ["lowback", "腰", "腰部"],
+  ["hip", "おしり", "臀部"],
+  ["hipjoint", "股関節", "股関節部"],
+  ["thigh_front", "太ももの前", "大腿部・前面"],
+  ["thigh_back", "太ももの後ろ", "大腿部・後面"],
+  ["knee", "ひざ", "膝部"],
+  ["shin", "すね", "下腿部・前面"],
+  ["calf", "ふくらはぎ", "下腿部・後面"],
+  ["foot", "足", "足部"],
+];
+
+const { BODY_PARTS, bodyPart, bodyPartLabel } = await import("../src/data/bodyParts.js");
+const { MUSCLES } = await import("../src/data/muscles.js");
+
+test("部位名の表記が先方の色分け図どおり", () => {
+  for (const [id, plain, formal] of SPEC_BODY_PARTS) {
+    const p = BODY_PARTS[id];
+    assert.ok(p, `部位 ${id} が無い`);
+    assert.equal(p.plain, plain, `${id} の一般語`);
+    assert.equal(p.formal, formal, `${id} の専門語`);
+  }
+});
+
+test("すべての筋肉に実在する部位が紐づいている", () => {
+  for (const m of MUSCLES) {
+    assert.ok(m.bodyPart, `${m.id} に bodyPart が無い`);
+    assert.ok(
+      BODY_PARTS[m.bodyPart],
+      `${m.id} の bodyPart "${m.bodyPart}" が bodyParts.js に無い`,
+    );
+    // フォールバック（"—"）に落ちていないことを表示側の関数でも確かめる。
+    assert.notEqual(bodyPart(m.bodyPart).plain, "—", `${m.id} が部位未設定に落ちている`);
+    assert.match(bodyPartLabel(m.bodyPart), /^.+（.+）$/, `${m.id} の表示形`);
+  }
+});
+
+test("部位の色は図と同じで、部位名は一意", () => {
+  const seen = new Map();
+  for (const [id, def] of Object.entries(BODY_PARTS)) {
+    assert.match(def.accent, /^#[0-9A-F]{6}$/, `${id} の accent`);
+    assert.match(def.tint, /^#[0-9A-F]{6}$/, `${id} の tint`);
+    const label = `${def.plain}（${def.formal}）`;
+    assert.ok(!seen.has(label), `部位名 "${label}" が ${seen.get(label)} と重複`);
+    seen.set(label, id);
+  }
+});
