@@ -47,6 +47,10 @@ svg候補プレビュー/
 
 # Exercise image originals (local backup before whiteout-meyasu.py)
 assets/exercises/originals/
+# 同・文言書き換え前のバックアップ（scripts/rewrite-card-copy.py が作る）
+assets/exercises/pre-copy/
+
+__pycache__/
 
 # Node (if added later)
 node_modules/
