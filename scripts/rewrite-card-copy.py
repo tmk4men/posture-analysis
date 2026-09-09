@@ -22,11 +22,15 @@
 
 リポジトリルートから:
     python scripts/rewrite-card-copy.py
-初回に assets/exercises/pre-copy/ へ元画像を退避するので、何度流しても結果は同じ。
+
+元画像は必ず ORIGINALS_REF（書き換え前のコミット）から取り出す。
+assets/exercises/ の中身は書き換え後の状態でコミットされているので、そこを退避元にすると
+「書き換え済みの絵から元の字幅を測る」ことになり、流すたびに字が細く小さくなっていく。
+実際にそれで1回作り直している。何度流しても同じ結果になるのはこの取り出し方のおかげ。
 """
 
 import os
-import shutil
+import subprocess
 import sys
 
 import numpy as np
@@ -35,6 +39,11 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 EX = os.path.join(ROOT, "assets", "exercises")
 BACKUP = os.path.join(EX, "pre-copy")
+
+# 文言を書き換える前のカード（先方支給の状態）が入っている最後のコミット。
+# build-machine-cards.py でカードを作り直したときは、ここを新しいコミットに上げて
+# pre-copy/ を消してから流し直す。
+ORIGINALS_REF = "6b0e9fe"
 
 FONT_PATH = r"C:\Windows\Fonts\NotoSansJP-VF.ttf"
 WEIGHTS = ["Light", "Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
@@ -78,7 +87,7 @@ CHANGES = {
         "catch": ("ハムストリングスを鍛えて膝まわりを安定", "太ももの後ろを鍛えて膝まわりを安定"),
     },
     "071D6111-4469-4F5B-A134-BBEEB4CC5FC4": {  # シーテッドレッグプレス
-        "tag": ("下肢強化", "ふともも"),
+        "tag": ("下肢強化", "太もも"),
         "catch": ("大腿四頭筋・臀筋群を鍛えて立ち上がりを支える",
                   "太ももの前とおしりを鍛えて立ち上がりを支える"),
     },
@@ -303,14 +312,30 @@ def rewrite(name, spec):
     print(f"  {name[:20]:22s} " + " / ".join(notes))
 
 
-def main():
+def fetch_originals():
+    """書き換え前のカードを ORIGINALS_REF から pre-copy/ に取り出す。"""
     os.makedirs(BACKUP, exist_ok=True)
+    got = 0
     for name in CHANGES:
-        src, bak = os.path.join(EX, name + ".webp"), os.path.join(BACKUP, name + ".webp")
-        if not os.path.exists(src):
-            sys.exit(f"カードが無い: {src}")
-        if not os.path.exists(bak):
-            shutil.copy2(src, bak)
+        bak = os.path.join(BACKUP, name + ".webp")
+        if os.path.exists(bak):
+            continue
+        path = f"assets/exercises/{name}.webp"
+        blob = subprocess.run(
+            ["git", "show", f"{ORIGINALS_REF}:{path}"],
+            cwd=ROOT, capture_output=True,
+        ).stdout
+        if blob[:4] != b"RIFF":
+            sys.exit(f"{ORIGINALS_REF} から {path} を取り出せない")
+        with open(bak, "wb") as f:
+            f.write(blob)
+        got += 1
+    if got:
+        print(f"  元画像 {got} 枚を {ORIGINALS_REF} から取り出した")
+
+
+def main():
+    fetch_originals()
     print(f"カード文言の書き換え（{len(CHANGES)}枚）")
     for name, spec in CHANGES.items():
         rewrite(name, spec)
