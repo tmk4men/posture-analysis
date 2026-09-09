@@ -5,13 +5,13 @@
 // Safari 15（iOS 15）以降にしか無く、それより古い端末ではファイル自体が
 // 構文エラーになってアプリが丸ごと読み込まれない。画面には何も出ないので
 // 「写真も選べない・痛み部位も出ない」という症状だけが残る。
-import { detectPose, warmup } from "./pose/detector.js?v=20260909-0537";
-import { computeMetrics, summarizeAll, checkCapture } from "./pose/angles.js?v=20260909-0537";
-import { setupUpload, resetUpload } from "./ui/upload.js?v=20260909-0537";
-import { drawPoseOnCanvas, renderMetrics, renderCaptureNotes } from "./ui/overlay.js?v=20260909-0537";
-import { renderReport, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js?v=20260909-0537";
-import { PAIN_AREA_OPTIONS, deriveRecommendations } from "./pose/recommend.js?v=20260909-0537";
-import { requireAuth } from "./ui/auth.js?v=20260909-0537";
+import { detectPose, warmup } from "./pose/detector.js?v=20260909-0547";
+import { computeMetrics, summarizeAll, checkCapture } from "./pose/angles.js?v=20260909-0547";
+import { setupUpload, resetUpload } from "./ui/upload.js?v=20260909-0547";
+import { drawPoseOnCanvas, renderMetrics, renderCaptureNotes } from "./ui/overlay.js?v=20260909-0547";
+import { renderReport, renderRawSummary, setStatus, triggerPrint } from "./ui/report.js?v=20260909-0547";
+import { PAIN_AREA_OPTIONS, deriveRecommendations } from "./pose/recommend.js?v=20260909-0547";
+import { requireAuth } from "./ui/auth.js?v=20260909-0547";
 import {
   canGenerateReport,
   recordReport,
@@ -21,8 +21,8 @@ import {
   renderLimitReached,
   initEntitlementBridge,
   isPro,
-} from "./ui/paywall.js?v=20260909-0537";
-import { initIap } from "./ui/iap.js?v=20260909-0537";
+} from "./ui/paywall.js?v=20260909-0547";
+import { initIap } from "./ui/iap.js?v=20260909-0547";
 
 const VIEWS = ["front", "right"];
 

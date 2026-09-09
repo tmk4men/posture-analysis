@@ -11,8 +11,8 @@
 // both. Each per-leg lower-body muscle therefore has separate _MALE / _FEMALE
 // path constants tracing the actual silhouette of each figure.
 
-import { MUSCLES } from "../data/muscles.js?v=20260909-0537";
-import { bodyPart } from "../data/bodyParts.js?v=20260909-0537";
+import { MUSCLES } from "../data/muscles.js?v=20260909-0547";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0547";
 
 // 画像URLに付けるキャッシュバスター。自分の URL の ?v= をそのまま引き継ぐ。
 const V = new URL(import.meta.url).search;

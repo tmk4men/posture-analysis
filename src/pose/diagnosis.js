@@ -12,7 +12,7 @@
 //   - 申告された不調部位があれば必ず1つ触れる。
 //   - 最後に週N回の頻度を反映した前向きな見通しを添える。
 
-import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0537";
+import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0547";
 
 function clampFrequency(weeklyFrequency) {
   return Math.min(5, Math.max(1, parseInt(weeklyFrequency, 10) || 2));
@@ -181,8 +181,8 @@ const PAIN_SENTENCE = {
   hip: "気になっている股関節まわりの感覚とも、関わりやすい姿勢です。",
   knee: "気になっている膝まわりの感覚とも、関わりやすい姿勢です。",
   calf: "気になっているふくらはぎのハリとも、関わりやすい姿勢です。",
-  thigh_front: "気になっている太もも前のハリとも、関わりやすい姿勢です。",
-  thigh_back: "気になっている太もも裏のハリとも、関わりやすい姿勢です。",
+  thigh_front: "気になっている太ももの前のハリとも、関わりやすい姿勢です。",
+  thigh_back: "気になっている太ももの後ろのハリとも、関わりやすい姿勢です。",
 };
 
 // 申告部位のうち、最初に対応表に載っているものの一文を返す（無ければ null）。

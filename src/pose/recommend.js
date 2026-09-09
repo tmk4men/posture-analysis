@@ -5,10 +5,10 @@
 // ラクレッチ3・筋トレ3にする（実装は postureTypes.js）。
 // 人体図に出す弱化筋・短縮筋は、従来どおり計測値と申告部位から積み上げる。
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0537";
-import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0537";
-import { buildDiagnosis } from "./diagnosis.js?v=20260909-0537";
-import { analyzePosture } from "./postureTypes.js?v=20260909-0537";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0547";
+import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0547";
+import { buildDiagnosis } from "./diagnosis.js?v=20260909-0547";
+import { analyzePosture } from "./postureTypes.js?v=20260909-0547";
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
 // Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s
@@ -139,7 +139,7 @@ function detectIssues(byView) {
             ["quadriceps", `膝屈曲位 ${kn.value.toFixed(1)}°：膝伸展力が低下`],
           ],
           tight: [
-            ["hamstrings", `膝屈曲位 ${kn.value.toFixed(1)}°：もも裏が短縮`],
+            ["hamstrings", `膝屈曲位 ${kn.value.toFixed(1)}°：太ももの後ろが短縮`],
             ["calves", `膝屈曲位 ${kn.value.toFixed(1)}°：下腿後面が短縮`],
           ],
         });
@@ -251,7 +251,7 @@ function pickTopMetric(byView) {
       }) : ({
         severity: Math.abs(tr.value) / WARN.trunk_lean,
         weak: [["erector_spinae", `体幹後傾 ${signed(tr.value)}°（軽度）：背筋の活性化`]],
-        tight: [["hamstrings", `体幹後傾 ${signed(tr.value)}°（軽度）：もも裏の張りに注意`]],
+        tight: [["hamstrings", `体幹後傾 ${signed(tr.value)}°（軽度）：太ももの後ろの張りに注意`]],
       }),
     });
   }
@@ -351,7 +351,7 @@ const PAIN_AREA_MAP = {
     weak: [["quadriceps", "膝の不調：膝伸展・支持の力が不足"]],
     tight: [
       ["quadriceps", "膝の不調：大腿四頭筋の張りが膝関節に負担"],
-      ["hamstrings", "膝の不調：もも裏の短縮が膝屈曲を助長"],
+      ["hamstrings", "膝の不調：太ももの後ろの短縮が膝屈曲を助長"],
       ["calves", "膝の不調：下腿後面の短縮"],
     ],
   },
@@ -361,14 +361,14 @@ const PAIN_AREA_MAP = {
     tight: [["calves", "ふくらはぎの張り：下腿三頭筋の短縮"]],
   },
   thigh_front: {
-    label: "太もも前の張り",
+    label: "太ももの前の張り",
     weak: [],
-    tight: [["quadriceps", "太もも前の張り：大腿四頭筋の短縮"]],
+    tight: [["quadriceps", "太ももの前の張り：大腿四頭筋の短縮"]],
   },
   thigh_back: {
-    label: "太もも裏の張り",
+    label: "太ももの後ろの張り",
     weak: [],
-    tight: [["hamstrings", "太もも裏の張り：ハムストリングスの短縮"]],
+    tight: [["hamstrings", "太ももの後ろの張り：ハムストリングスの短縮"]],
   },
 };
 

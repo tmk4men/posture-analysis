@@ -8,11 +8,11 @@
 //   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0537";
-import { bodyPart } from "../data/bodyParts.js?v=20260909-0537";
-import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0537";
-import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0537";
-import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0537";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0547";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0547";
+import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0547";
+import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0547";
+import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0547";
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 

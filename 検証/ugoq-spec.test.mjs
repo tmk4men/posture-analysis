@@ -425,3 +425,24 @@ test("部位の色は図と同じで、部位名は一意", () => {
     seen.set(label, id);
   }
 });
+
+// 患者が読む面では、部位の呼び方を先方の色分け図に揃える。
+// 表のチップが「太ももの後ろ（大腿部・後面）」なのに、同じカードの注記が
+// 「もも裏の短縮」だと、1枚の中で同じ場所を2通りに呼ぶことになる。
+test("患者に出る文言で部位の呼び方が揺れていない", async () => {
+  const { readFileSync } = await import("node:fs");
+  const BANNED = ["太もも前", "太もも裏", "もも裏"];
+  for (const f of ["../src/pose/recommend.js", "../src/pose/diagnosis.js"]) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    for (const word of BANNED) {
+      assert.ok(
+        !src.includes(word),
+        `${f} に古い言い方 "${word}" が残っている（正: 太ももの前 / 太ももの後ろ）`,
+      );
+    }
+  }
+  const { PAIN_AREA_OPTIONS } = await import("../src/pose/recommend.js");
+  const labels = PAIN_AREA_OPTIONS.map((o) => o.label);
+  assert.ok(labels.includes("太ももの前の張り"), labels.join("・"));
+  assert.ok(labels.includes("太ももの後ろの張り"), labels.join("・"));
+});
