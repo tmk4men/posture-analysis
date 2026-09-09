@@ -6,16 +6,19 @@
   に変えたのに、2ページ目のカードは「大腿四頭筋」「臀筋群」「広背筋」「ハムストリングス」
   のままで、同じレポートの中で同じ場所を2通りに呼んでいた。カードも図の言い方に揃える。
 
-書き換えの方針:
-  - 患者が読めない筋肉名だけを部位名に置き換える。
-  - 「肩甲骨」「体幹」「骨盤」「背骨」は普通に通じるので、必要以上に触らない。
-  - 「膝」は先方の仕様書（姿勢分析マスター）が膝表記なので、そちらに合わせて残す。
+書き換えるもの:
+  - tag   … タイトル右のタグ。「胸まわり伸ばし」→「胸部」のように部位名にする
+            （先方が IMG_3374 で1枚ずつ赤で指定・2026-09-09）。
+  - catch … その下の1行。患者が読めない筋肉名を部位名に置き換える。
+  「膝」は先方の仕様書（姿勢分析マスター）が膝表記なので、そちらに合わせて残す。
 
 作り方の方針:
-  カードは先方支給で、サイズも余白も組み方も1枚ずつ違う。座標も書体も決め打ちにせず、
-  元の1行から「位置・字面の高さ・1文字あたりの幅・線の濃さ」を実測して同じ見た目で
-  描き直す。元の書体は手元に無いので、Noto Sans JP を可変ウェイトで同じ濃さに寄せ、
-  横方向だけ元の字幅まで潰して長体を再現する。
+  カードは先方支給で、サイズも余白も組み方も1枚ずつ違う。座標も書体も決め打ちにしない。
+  マシン名は先方の絵をそのまま切り取って使い、描き直すのはタグとキャッチだけにする。
+  元の文字から「位置・字面の高さ・1文字あたりの幅・線の濃さ」を実測し、Noto Sans JP を
+  可変ウェイトで同じ濃さに寄せ、横だけ元の字幅まで潰して長体を再現する。
+
+  build-machine-cards.py を流し直したときは、pre-copy/ を消してからこれを流し直すこと。
 
 リポジトリルートから:
     python scripts/rewrite-card-copy.py
@@ -43,43 +46,65 @@ EDGE = 26  # カード外周の枠線を文字と見間違えないための左�
 # 字数から1文字あたりの幅を、濃さからウェイトを割り出すのに使う（記録も兼ねる）。
 CHANGES = {
     "47852239-9C3A-4B47-B9FE-142572EFF0E9": {  # アブドミナル
+        "tag": ("体幹安定", "腹部"),
         "catch": ("腹筋群を鍛えて座位姿勢を安定", "お腹を鍛えて座った姿勢を安定"),
     },
     "3A4181BD-5FF1-436D-8880-DF9B496A16C9": {  # インナー、アウターサイ
+        "tag": ("股関節安定", "股関節"),
         "catch": ("内もも・外ももを鍛えて骨盤の安定を支える",
                   "太ももの内側・外側を鍛えて骨盤の安定を支える"),
     },
     "D707D2D4-0E2A-4033-9A9F-722379755957": {  # バックエクステンションベンチ
+        "tag": ("体幹伸展", "背部・腰部"),
         "catch": ("脊柱起立筋を鍛えて姿勢を支える", "背中と腰を鍛えて姿勢を支える"),
     },
     "956B29CA-C3D4-43B7-A627-96E324DEB845": {  # ヒップスラスト
+        "tag": ("骨盤安定", "臀部"),
         "catch": ("臀筋群を鍛えて骨盤を支える", "おしりを鍛えて骨盤を支える"),
     },
     "70979BF0-ADE4-4DD5-B203-9AF216E8A7C5": {  # ラットプルダウン
+        "tag": ("背中強化", "背部"),
         "catch": ("広背筋を鍛えて肩まわりと姿勢を支える", "背中を鍛えて肩まわりと姿勢を支える"),
     },
     "70FEA71D-817C-4ADC-8076-92ABEE5AD0D7": {  # レッグエクステンション
-        "title": (("レッグエクステンション", "太もも前強化"),
-                  ("レッグエクステンション", "太ももの前強化")),
+        "tag": ("太もも前強化", "太ももの前"),
         "catch": ("大腿四頭筋を鍛えて立ち上がりを支える", "太ももの前を鍛えて立ち上がりを支える"),
     },
+    "928FDF46-F992-4F28-8FFC-193BE60049C1": {  # ペックフライ、リアデルト
+        "tag": ("胸背バランス", "背部・胸部"),
+    },
     "A1F2FF6B-C281-44D5-BFF9-48058F49DD3A": {  # シーテッドレッグカール
-        "title": (("シーテッドレッグカール", "もも裏強化"),
-                  ("シーテッドレッグカール", "太ももの後ろ強化")),
+        "tag": ("もも裏強化", "太ももの後ろ"),
         "catch": ("ハムストリングスを鍛えて膝まわりを安定", "太ももの後ろを鍛えて膝まわりを安定"),
     },
     "071D6111-4469-4F5B-A134-BBEEB4CC5FC4": {  # シーテッドレッグプレス
-        "title": (("シーテッドレッグプレス", "下肢強化"),
-                  ("シーテッドレッグプレス", "脚の強化")),
+        "tag": ("下肢強化", "ふともも"),
         "catch": ("大腿四頭筋・臀筋群を鍛えて立ち上がりを支える",
                   "太ももの前とおしりを鍛えて立ち上がりを支える"),
     },
+    "8B3E0B27-6FF0-4801-BABD-516C1E4A05D9": {  # シーテッドロウ
+        "tag": ("肩甲骨を寄せる", "背部"),
+    },
+    "calf-raise": {
+        "tag": ("ふくらはぎ強化", "ふくらはぎ"),
+    },
     "rakuretch-adductor": {
+        "tag": ("股関節伸ばし", "股関節"),
         "catch": ("内ももを伸ばして股関節まわりの動きをなめらかに",
                   "太ももの内側を伸ばして股関節まわりの動きをなめらかに"),
     },
     "rakuretch-chest": {
+        "tag": ("胸まわり伸ばし", "胸部"),
         "catch": ("胸筋群を伸ばして巻き肩をリセット", "胸を伸ばして巻き肩をリセット"),
+    },
+    "rakuretch-hip": {
+        "tag": ("股関節伸ばし", "股関節"),
+    },
+    "rakuretch-shoulder": {
+        "tag": ("肩まわり伸ばし", "肩部"),
+    },
+    "rakuretch-twister": {
+        "tag": ("体幹ひねり", "腰部・背部"),
     },
 }
 
@@ -125,18 +150,29 @@ def split_title(a, band):
     y0, y1, x0, x1 = band
     dark = is_ink(a[y0:y1 + 1, :])
     colh = dark.sum(axis=0)
-    tall = (y1 - y0 + 1) * 0.70
-    empty = colh <= 1
-    runs, cur = [], None
-    for x in range(x0 + 30, x1 - 20):
-        if colh[x] >= tall and cur is None:
-            cur = x
-        elif colh[x] < tall and cur is not None:
-            runs.append((cur, x - 1))
-            cur = None
+    empty = colh <= 2   # にじみで1〜2画素残ることがあるので完全な0は求めない
+    h = y1 - y0 + 1
+
     # 罫線は「背が高い・細い・両側が空いている」列。文字の縦画と紛れないよう空白まで見る。
-    cand = [(a0 + a1) // 2 for a0, a1 in runs
-            if a1 - a0 <= 9 and empty[max(0, a0 - 14):a0].all() and empty[a1 + 1:a1 + 15].all()]
+    # 罫線の高さは行の高さに対して一定ではない（大きなカタカナが行の高さを決めている
+    # カードでは、罫線は行の半分ほどしかない）ので、しきい値を緩めながら探す。
+    cand = []
+    for ratio in (0.70, 0.55, 0.45, 0.35):
+        tall = h * ratio
+        runs, cur = [], None
+        for x in range(x0 + 30, x1 - 20):
+            if colh[x] >= tall and cur is None:
+                cur = x
+            elif colh[x] < tall and cur is not None:
+                runs.append((cur, x - 1))
+                cur = None
+        cand = [(a0 + a1) // 2 for a0, a1 in runs
+                if a1 - a0 <= 9
+                # 罫線の左右3画素はにじみが乗るので、そこは飛ばして空白かどうかを見る
+                and empty[max(0, a0 - 15):max(0, a0 - 3)].all()
+                and empty[a1 + 4:a1 + 16].all()]
+        if cand:
+            break
     if not cand:
         raise RuntimeError("縦罫線が見つからない")
     rule = max(cand, key=lambda x: min(x - x0, x1 - x))
@@ -214,33 +250,37 @@ def rewrite(name, spec):
     d = ImageDraw.Draw(im)
     notes = []
 
-    if "title" in spec:
-        (m_be, t_be), (m_af, t_af) = spec["title"]
+    if "tag" in spec:
+        # マシン名（ラクレッチ、チェスト …）の絵は先方のものをそのまま切り取って使い、
+        # 差し替えるのは縦罫線の右のタグだけにする。タグは短くなることが多いので、
+        # 「マシン名＋罫線＋新しいタグ」をひとかたまりとして中央に置き直す。
+        t_be, t_af = spec["tag"]
         y0, y1, _, _ = rows[0]
         rule, mb, tb = split_title(a, rows[0])
         bg = bg_color(a, y0)
-        m_h, t_h = mb[3] - mb[1] + 1, tb[3] - tb[1] + 1
-        m_unit = (mb[2] - mb[0] + 1) / len(m_be)  # 元の1文字あたりの幅
-        t_unit = (tb[2] - tb[0] + 1) / len(t_be)
+        t_h = tb[3] - tb[1] + 1
+        t_unit = (tb[2] - tb[0] + 1) / len(t_be)   # 元の1文字あたりの幅
         gap = rule - mb[2]
-        m_wt = match_weight(m_be, m_h, ink_ratio(a, mb), bg, GREEN)
         t_wt = match_weight(t_be, t_h, ink_ratio(a, tb), bg, GREEN)
 
-        tw, sw = m_unit * len(m_af), t_unit * len(t_af)
+        top, bot = y0 - 8, y1 + 9
+        machine = im.crop((mb[0], top, mb[2] + 1, bot))
+        m_w = machine.width
+        sw = t_unit * len(t_af)
         limit = w - 2 * (EDGE + 18)
-        total = tw + gap * 2 + 5 + sw
-        if total > limit:  # 字数が増えて入らない分だけ等比で詰める
-            k = (limit - gap * 2 - 5) / (tw + sw)
-            tw, sw, total = tw * k, sw * k, limit
+        total = m_w + gap * 2 + 5 + sw
+        if total > limit:      # 字数が増えて入らない分だけタグ側を詰める
+            sw = max(20, sw - (total - limit))
+            total = limit
 
-        d.rectangle([EDGE, y0 - 8, w - EDGE, y1 + 8], fill=bg)
-        x = w / 2 - total / 2
-        draw_squeezed(im, m_af, font(fit_height(m_af, m_h, m_wt), m_wt), GREEN, tw, x, mb[1])
-        rx = int(round(x + tw + gap))
+        d.rectangle([EDGE, top, w - EDGE, bot], fill=bg)
+        x = int(round(w / 2 - total / 2))
+        im.paste(machine, (x, top))
+        rx = x + m_w + gap
         d.line([(rx, y0 + 4), (rx, y1 - 2)], fill=GREEN, width=5)
         draw_squeezed(im, t_af, font(fit_height(t_af, t_h, t_wt), t_wt), GREEN, sw,
                       rx + gap + 5, tb[3] - t_h + 1)
-        notes.append(f"title「{m_af}｜{t_af}」{m_wt}/{t_wt} 幅{int(total)}≦{limit}")
+        notes.append(f"tag「{t_be}」→「{t_af}」{t_wt} 幅{int(total)}≦{limit}")
 
     if "catch" in spec:
         before, after = spec["catch"]
