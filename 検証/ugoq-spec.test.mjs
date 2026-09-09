@@ -415,11 +415,12 @@ test("すべての筋肉に実在する部位が紐づいている", () => {
   }
 });
 
-test("部位の色は図と同じで、部位名は一意", () => {
+test("部位名は一意で、部位ごとの色を持たない", () => {
   const seen = new Map();
   for (const [id, def] of Object.entries(BODY_PARTS)) {
-    assert.match(def.accent, /^#[0-9A-F]{6}$/, `${id} の accent`);
-    assert.match(def.tint, /^#[0-9A-F]{6}$/, `${id} の tint`);
+    // 項目ごとの色分けは先方の指示で廃止。色を足し戻したらここで気づく。
+    assert.equal(def.accent, undefined, `${id} に accent が復活している`);
+    assert.equal(def.tint, undefined, `${id} に tint が復活している`);
     const label = `${def.plain}（${def.formal}）`;
     assert.ok(!seen.has(label), `部位名 "${label}" が ${seen.get(label)} と重複`);
     seen.set(label, id);

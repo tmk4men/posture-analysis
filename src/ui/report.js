@@ -8,11 +8,11 @@
 //   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0626";
-import { bodyPart } from "../data/bodyParts.js?v=20260909-0626";
-import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0626";
-import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0626";
-import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0626";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-1351";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-1351";
+import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-1351";
+import { renderAnatomyPanel } from "./anatomy.js?v=20260909-1351";
+import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-1351";
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -70,7 +70,7 @@ function groupByPart(items, role) {
 function partCardHtml(group, role) {
   const { part, notes } = group;
   return `
-    <li class="muscle-card muscle-card--${role}" style="--part-accent:${part.accent};--part-tint:${part.tint}">
+    <li class="muscle-card muscle-card--${role}">
       <div class="muscle-card__head">
         <span class="muscle-card__part">${escapeHtml(part.plain)}<span class="muscle-card__part-formal">（${escapeHtml(part.formal)}）</span></span>
       </div>
