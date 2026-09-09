@@ -14,7 +14,7 @@
 // 注意：このゲートは開発者ツールから突破可能なクライアント側の緩い制御。売上の要は
 // Apple課金側で担保する前提。
 
-import { isNativeApp } from "./platform.js?v=20260909-0547";
+import { isNativeApp } from "./platform.js?v=20260909-0626";
 
 const PRO_KEY = "posture_pro_v1";
 const USAGE_KEY = "posture_report_usage_v1";

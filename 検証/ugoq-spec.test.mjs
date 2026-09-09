@@ -446,3 +446,28 @@ test("患者に出る文言で部位の呼び方が揺れていない", async ()
   assert.ok(labels.includes("太ももの前の張り"), labels.join("・"));
   assert.ok(labels.includes("太ももの後ろの張り"), labels.join("・"));
 });
+
+// 患者が読む面に解剖学の筋肉名を出さない（整骨院の要望・2026-09-09）。
+// 表のチップを部位名だけにしても、注記に「広背筋の短縮」などが残っていたら意味がない。
+test("患者に出る注記に筋肉名が残っていない", async () => {
+  const { readFileSync } = await import("node:fs");
+  const MUSCLE_WORDS = [
+    "深層頸部屈筋", "肩甲挙筋", "僧帽筋", "菱形筋", "三角筋", "大胸筋", "小胸筋", "胸筋群",
+    "広背筋", "脊柱起立筋", "腹直筋", "腹斜筋", "腸腰筋", "大臀筋", "中臀筋", "臀筋群",
+    "大腿四頭筋", "内転筋", "ハムストリングス", "下腿三頭筋", "腓腹筋", "ヒラメ筋",
+    "上腕二頭筋", "上腕三頭筋", "トレンデレンブルグ",
+  ];
+  // recommend.js は注記しか持たないのでファイルごと見る
+  const src = readFileSync(new URL("../src/pose/recommend.js", import.meta.url), "utf8");
+  for (const word of MUSCLE_WORDS) {
+    assert.ok(!src.includes(word), `recommend.js の注記に "${word}" が残っている`);
+  }
+  // muscles.js は label に筋肉名を持つ（人体図の対応付け用）ので、注記だけを見る
+  const { MUSCLES } = await import("../src/data/muscles.js");
+  for (const m of MUSCLES) {
+    for (const word of MUSCLE_WORDS) {
+      assert.ok(!m.weakNote.includes(word), `${m.id} の weakNote に "${word}"`);
+      assert.ok(!m.tightNote.includes(word), `${m.id} の tightNote に "${word}"`);
+    }
+  }
+});

@@ -8,11 +8,11 @@
 //   trainingPlan: [ { assetId } ]            ← page 2 = 4 pre-baked images
 // }
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0547";
-import { bodyPart } from "../data/bodyParts.js?v=20260909-0547";
-import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0547";
-import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0547";
-import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0547";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0626";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0626";
+import { ASSET_BY_ID } from "../data/exerciseAssets.js?v=20260909-0626";
+import { renderAnatomyPanel } from "./anatomy.js?v=20260909-0626";
+import { painAreaLabels, prescriptionForFrequency } from "../pose/recommend.js?v=20260909-0626";
 
 const VIEW_LABELS = { front: "正面", back: "背面", left: "左側面", right: "右側面" };
 
@@ -43,20 +43,38 @@ function pickPhotoDataUrl(canvasDataUrls) {
   return { url: null, view: null };
 }
 
-// 患者さんが読む面なので、解剖学の筋肉名より先に部位名を出す（整骨院の要望・2026-09-09）。
+// 患者さんが読む面なので、解剖学の筋肉名は出さず部位名だけにする（整骨院の要望・2026-09-09）。
 // チップの色は先方の部位色分け図と同じ色にしてあるので、図と表を色で突き合わせられる。
-function muscleCardHtml(item, role) {
-  const def = MUSCLE_BY_ID[item.id];
-  if (!def) return "";
-  const part = bodyPart(def.bodyPart);
-  const note = item.note || (role === "weak" ? def.weakNote : def.tightNote);
+//
+// 同じ部位の筋肉が複数選ばれることがある（腹直筋と腹斜筋群＝どちらも「お腹」）。
+// 筋肉名を出さなくなった以上、それを2行並べると同じ行が重複しているようにしか見えないので、
+// 部位ごとに1枚のカードにまとめ、理由だけを並べる。
+function groupByPart(items, role) {
+  const order = [];
+  const byPart = new Map();
+  for (const item of items) {
+    const def = MUSCLE_BY_ID[item.id];
+    if (!def) continue;
+    const note = item.note || (role === "weak" ? def.weakNote : def.tightNote);
+    let group = byPart.get(def.bodyPart);
+    if (!group) {
+      group = { part: bodyPart(def.bodyPart), notes: [] };
+      byPart.set(def.bodyPart, group);
+      order.push(group);
+    }
+    if (note && !group.notes.includes(note)) group.notes.push(note);
+  }
+  return order;
+}
+
+function partCardHtml(group, role) {
+  const { part, notes } = group;
   return `
     <li class="muscle-card muscle-card--${role}" style="--part-accent:${part.accent};--part-tint:${part.tint}">
       <div class="muscle-card__head">
         <span class="muscle-card__part">${escapeHtml(part.plain)}<span class="muscle-card__part-formal">（${escapeHtml(part.formal)}）</span></span>
-        <span class="muscle-card__muscle">${escapeHtml(def.label)}</span>
       </div>
-      <div class="muscle-card__note">${escapeHtml(note)}</div>
+      ${notes.map((n) => `<div class="muscle-card__note">${escapeHtml(n)}</div>`).join("")}
     </li>
   `;
 }
@@ -178,7 +196,7 @@ export function renderReport({ findings, patient, photos }) {
             <span class="muscle-list__title">弱化している筋肉</span>
             <span class="muscle-list__sub">鍛えるべき筋肉</span>
           </header>
-          <ul>${findings.weakMuscles.map((m) => muscleCardHtml(m, "weak")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
+          <ul>${groupByPart(findings.weakMuscles, "weak").map((g) => partCardHtml(g, "weak")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
         </div>
         <div class="muscle-list muscle-list--tight">
           <header>
@@ -186,7 +204,7 @@ export function renderReport({ findings, patient, photos }) {
             <span class="muscle-list__title">短縮・硬くなっている筋肉</span>
             <span class="muscle-list__sub">ほぐすべき筋肉</span>
           </header>
-          <ul>${findings.tightMuscles.map((m) => muscleCardHtml(m, "tight")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
+          <ul>${groupByPart(findings.tightMuscles, "tight").map((g) => partCardHtml(g, "tight")).join("") || "<li class='muscle-card muscle-card--empty'>—</li>"}</ul>
         </div>
       </section>
 

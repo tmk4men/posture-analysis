@@ -58,7 +58,7 @@ export const MUSCLES = [
     bodyPart: "abdomen",
     typicalRole: "weak",
     weakNote: "体幹の側屈・回旋の安定性が不足",
-    tightNote: "片側の腹斜筋過緊張で骨盤・肋骨の左右差を助長",
+    tightNote: "片側だけ強く張って骨盤・肋骨の左右差を助長",
   },
   {
     id: "iliopsoas",
@@ -85,7 +85,7 @@ export const MUSCLES = [
     bodyPart: "thigh_inner",
     typicalRole: "tight",
     weakNote: "骨盤の側方安定性が低下",
-    tightNote: "股関節外転制限・X脚傾向を助長",
+    tightNote: "脚を横に開きにくく、X脚の傾向を助長",
   },
 
   // ===== 背面（BACK） =====
@@ -123,7 +123,7 @@ export const MUSCLES = [
     bodyPart: "back",
     typicalRole: "tight",
     weakNote: "肩関節伸展・体幹安定の力が低下",
-    tightNote: "肩を内旋させ巻き肩を助長",
+    tightNote: "肩を内側にねじり、巻き肩を助長",
   },
   {
     id: "triceps",
@@ -158,7 +158,7 @@ export const MUSCLES = [
     side: "back",
     bodyPart: "hip",
     typicalRole: "weak",
-    weakNote: "片脚立位の骨盤水平保持が不足（トレンデレンブルグ傾向）",
+    weakNote: "片脚で立ったときに骨盤を水平に保つ力が不足",
     tightNote: "股関節外転の張り",
   },
   {
@@ -177,7 +177,7 @@ export const MUSCLES = [
     bodyPart: "calf",
     typicalRole: "tight",
     weakNote: "足関節底屈の力が低下",
-    tightNote: "足首背屈制限・反張膝の助長",
+    tightNote: "足首が反りにくく、膝の反りを助長",
   },
 ];
 

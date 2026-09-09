@@ -67,12 +67,6 @@ renderReport({
              gender: V.get("gender") ?? "female", painAreas },
   photos: null,
 });
-// ?nomuscle=1 … 部位名だけにした見え方の当て（先方に見せて決めてもらうための表示だけの切り替え）
-if (V.get("nomuscle")) {
-  const st = document.createElement("style");
-  st.textContent = ".muscle-card__muscle{display:none}";
-  document.head.appendChild(st);
-}
 document.body.dataset.ready = "1";
 </script>
 </body></html>

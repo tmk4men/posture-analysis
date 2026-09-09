@@ -11,8 +11,8 @@
 // both. Each per-leg lower-body muscle therefore has separate _MALE / _FEMALE
 // path constants tracing the actual silhouette of each figure.
 
-import { MUSCLES } from "../data/muscles.js?v=20260909-0547";
-import { bodyPart } from "../data/bodyParts.js?v=20260909-0547";
+import { MUSCLES } from "../data/muscles.js?v=20260909-0626";
+import { bodyPart } from "../data/bodyParts.js?v=20260909-0626";
 
 // 画像URLに付けるキャッシュバスター。自分の URL の ?v= をそのまま引き継ぐ。
 const V = new URL(import.meta.url).search;
@@ -389,6 +389,8 @@ const LABEL_PAD = 7;
 function buildLabels(anchors, weakSet, tightSet, opts = {}) {
   const { gender = "male" } = opts;
   const lines = [];
+  // 吹き出しは部位名だけなので、同じ図に「お腹」が2つ出ないよう1つにまとめる。
+  const shown = new Set();
   for (const [muscleId, pos] of Object.entries(anchors)) {
     let role = null;
     if (weakSet.has(muscleId)) role = "weak";
@@ -401,6 +403,9 @@ function buildLabels(anchors, weakSet, tightSet, opts = {}) {
     // 幅80px程度にしか描けず、筋肉名を入れると字が潰れて誰も読めない。
     // 解剖学の筋肉名は下の表（muscle-card）で部位名と並べて出している。
     const text = bodyPart(def.bodyPart).plain;
+    const key = `${role}:${def.bodyPart}`;
+    if (shown.has(key)) continue;
+    shown.add(key);
 
     let anchorX = pos.anchorX;
     let anchorY = pos.anchorY;

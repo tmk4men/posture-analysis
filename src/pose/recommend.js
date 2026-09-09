@@ -5,10 +5,10 @@
 // ラクレッチ3・筋トレ3にする（実装は postureTypes.js）。
 // 人体図に出す弱化筋・短縮筋は、従来どおり計測値と申告部位から積み上げる。
 
-import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0547";
-import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0547";
-import { buildDiagnosis } from "./diagnosis.js?v=20260909-0547";
-import { analyzePosture } from "./postureTypes.js?v=20260909-0547";
+import { MUSCLE_BY_ID } from "../data/muscles.js?v=20260909-0626";
+import { WARN, KNEE, ENTRY_RATIO, getMetric } from "./thresholds.js?v=20260909-0626";
+import { buildDiagnosis } from "./diagnosis.js?v=20260909-0626";
+import { analyzePosture } from "./postureTypes.js?v=20260909-0626";
 
 // Per-frequency rep/set prescription (see TRAINING_RULEBOOK.md for evidence).
 // Same numbers apply to strength and stretch — for stretch machines, 1 rep ≈ 3-5s
@@ -97,7 +97,7 @@ function detectIssues(byView) {
             ["glutes", `${tag}：股関節伸展の力が不足`],
           ],
           tight: [
-            ["iliopsoas", `${tag}：股関節屈筋が骨盤を前傾`],
+            ["iliopsoas", `${tag}：前側が縮んで骨盤が前に傾く`],
             ["erector_spinae", `${tag}：腰背部で代償`],
           ],
         });
@@ -157,10 +157,10 @@ function detectIssues(byView) {
         severity: sev,
         weak: [
           ["scapular_stabilizers", `${tag}：肩甲骨周囲の左右差`],
-          ["lats", `${tag}：${highSide}と対側で広背筋の左右差`],
+          ["lats", `${tag}：${highSide}と対側で背中の張りに左右差`],
         ],
         tight: [
-          ["upper_traps", `${tag}：${highSide}側の上部僧帽筋に過負荷`],
+          ["upper_traps", `${tag}：${highSide}側の首すじから肩に過負荷`],
         ],
       });
     }
@@ -173,12 +173,12 @@ function detectIssues(byView) {
       issues.push({
         severity: sev,
         weak: [
-          ["gluteus_medius", `${tag}：${highSide}側中臀筋の支持力が低下`],
+          ["gluteus_medius", `${tag}：${highSide}側で骨盤を支える力が低下`],
           ["obliques", `${tag}：体幹側面の安定性が不足`],
         ],
         tight: [
           ["erector_spinae", `${tag}：${highSide}側腰背部で代償`],
-          ["adductors", `${tag}：${highSide}と対側の内転筋が緊張`],
+          ["adductors", `${tag}：${highSide}と対側が縮んで硬い`],
         ],
       });
     }
@@ -208,7 +208,7 @@ function detectIssues(byView) {
           ["abdominals", `${tag}：体幹前面の支持が不足`],
         ],
         tight: [
-          ["adductors", `${tag}：${shiftSide}側内転筋が短縮`],
+          ["adductors", `${tag}：${shiftSide}側が縮んで硬い`],
         ],
       });
     }
@@ -262,7 +262,7 @@ function pickTopMetric(byView) {
       build: () => ({
         severity: Math.abs(st.value) / WARN.shoulder_tilt,
         weak: [["scapular_stabilizers", `肩の傾き ${signed(st.value)}°（軽度）：肩甲骨周囲の左右差`]],
-        tight: [["upper_traps", `肩の傾き ${signed(st.value)}°（軽度）：${st.value > 0 ? "左" : "右"}側上部僧帽筋`]],
+        tight: [["upper_traps", `肩の傾き ${signed(st.value)}°（軽度）：${st.value > 0 ? "左" : "右"}側の首すじから肩`]],
       }),
     });
     const pt = getMetric(byView, "front", "pelvic_tilt");
@@ -312,7 +312,7 @@ const PAIN_AREA_MAP = {
       ["posterior_deltoid", "肩の不調：肩後方の引き戻し力が不足"],
     ],
     tight: [
-      ["upper_traps", "肩の不調：僧帽筋上部・肩甲挙筋に過緊張"],
+      ["upper_traps", "肩の不調：首すじから肩にかけて過緊張"],
       ["pectorals", "肩の不調：胸前面の短縮で巻き肩を助長"],
     ],
   },
@@ -320,8 +320,8 @@ const PAIN_AREA_MAP = {
     label: "背中の張り",
     weak: [["scapular_stabilizers", "背中の張り：肩甲骨周囲の活性が不足"]],
     tight: [
-      ["lats", "背中の張り：広背筋の短縮"],
-      ["erector_spinae", "背中の張り：脊柱起立筋の過緊張"],
+      ["lats", "背中の張り：わきの下から背中にかけて縮んでいる"],
+      ["erector_spinae", "背中の張り：背骨に沿って腰まで張っている"],
     ],
   },
   lowback: {
@@ -332,25 +332,25 @@ const PAIN_AREA_MAP = {
     ],
     tight: [
       ["erector_spinae", "腰痛：腰背部の過緊張"],
-      ["iliopsoas", "腰痛：股関節屈筋の短縮で骨盤前傾を助長"],
+      ["iliopsoas", "腰痛：前側が縮んで骨盤が前に傾く"],
     ],
   },
   hip: {
     label: "股関節の違和感",
     weak: [
-      ["glutes", "股関節の不調：大臀筋の支持力が不足"],
-      ["gluteus_medius", "股関節の不調：中臀筋の側方安定性が不足"],
+      ["glutes", "股関節の不調：骨盤を支える力が不足"],
+      ["gluteus_medius", "股関節の不調：横方向に支える力が不足"],
     ],
     tight: [
-      ["iliopsoas", "股関節の不調：股関節屈筋の短縮"],
-      ["adductors", "股関節の不調：内転筋の短縮"],
+      ["iliopsoas", "股関節の不調：前側が縮んでいる"],
+      ["adductors", "股関節の不調：内側が縮んでいる"],
     ],
   },
   knee: {
     label: "膝の痛み",
     weak: [["quadriceps", "膝の不調：膝伸展・支持の力が不足"]],
     tight: [
-      ["quadriceps", "膝の不調：大腿四頭筋の張りが膝関節に負担"],
+      ["quadriceps", "膝の不調：前側の張りが膝に負担"],
       ["hamstrings", "膝の不調：太ももの後ろの短縮が膝屈曲を助長"],
       ["calves", "膝の不調：下腿後面の短縮"],
     ],
@@ -358,17 +358,17 @@ const PAIN_AREA_MAP = {
   calf: {
     label: "ふくらはぎの張り",
     weak: [],
-    tight: [["calves", "ふくらはぎの張り：下腿三頭筋の短縮"]],
+    tight: [["calves", "ふくらはぎの張り：縮んで硬くなっている"]],
   },
   thigh_front: {
     label: "太ももの前の張り",
     weak: [],
-    tight: [["quadriceps", "太ももの前の張り：大腿四頭筋の短縮"]],
+    tight: [["quadriceps", "太ももの前の張り：縮んで硬くなっている"]],
   },
   thigh_back: {
     label: "太ももの後ろの張り",
     weak: [],
-    tight: [["hamstrings", "太ももの後ろの張り：ハムストリングスの短縮"]],
+    tight: [["hamstrings", "太ももの後ろの張り：縮んで硬くなっている"]],
   },
 };
 

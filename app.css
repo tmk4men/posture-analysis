@@ -931,7 +931,6 @@ body.auth-locked > *:not(.auth-dialog) { filter: blur(4px); pointer-events: none
   print-color-adjust: exact;
 }
 .muscle-card__part-formal { font-weight: 600; font-size: 7.6pt; }
-.muscle-card__muscle { font-size: 8.8pt; font-weight: 600; color: #5a6878; }
 .muscle-card__note  { font-size: 8.8pt; color: #5a6878; margin-top: 0.1rem; line-height: 1.4; }
 .muscle-card--weak  { border-left: 3px solid #3b8a4f; }
 .muscle-card--tight { border-left: 3px solid #d97a26; }
