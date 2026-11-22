@@ -1,101 +1,33 @@
 #!/usr/bin/env node
-// POSTURA 課金商品を一括セットアップ（App Store Connect API）。
+// 課金商品を一括セットアップ（App Store Connect API）。アプリ非依存。
 //   - 月額サブスク（自動更新）＋ 無料トライアル
 //   - 買い切り（非消耗）
 // すべて冪等（既にあれば作らずスキップ）。既定はドライラン。実行は --yes。
 //
-// 使い方（Mac）:
-//   node ~/postura/scripts/asc/setup-iap.mjs 6790814436          # 下見（作成しない）
-//   node ~/postura/scripts/asc/setup-iap.mjs 6790814436 --yes    # 実際に作成
+// 商品内容・価格・appId は「アプリ固有設定ファイル asc.config.json」に書く。
+// このスクリプト本体は編集不要（全アプリで使い回す）。
 //
-// 商品内容・価格は下の PLAN を編集すれば変えられる。
+// 使い方（Mac / どのプロジェクトからでも）:
+//   node <path>/setup-iap.mjs ./asc.config.json          # 下見（作成しない）
+//   node <path>/setup-iap.mjs ./asc.config.json --yes    # 実際に作成
+//   # 設定ファイルを実行フォルダに asc.config.json という名前で置けばパス省略も可。
+//   # appId だけ差し替えたいときは数字の引数で上書き: ... ./asc.config.json 1234567890
 
-import crypto from "node:crypto";
-import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { api, loadAppConfig } from "./lib.mjs";
 
-// ============ ここを編集すれば商品を調整できる ============
-const PLAN = {
-  territory: "JPN",
-  locale: "ja",
-  subscription: {
-    groupRef: "Postura Pro",
-    productId: "com.tomoki.postura.monthly",
-    name: "月額プラン",
-    period: "ONE_MONTH",
-    targetYen: 800, // 近い価格ポイントを自動選択
-    trialDuration: "ONE_WEEK", // 無料トライアル期間
-    locName: "POSTURA 月額プラン",
-    locDesc: "全機能を無制限に利用できます。",
-  },
-  lifetime: {
-    productId: "com.tomoki.postura.lifetime",
-    name: "買い切りプラン",
-    targetYen: 2500,
-    locName: "POSTURA 買い切り",
-    locDesc: "追加の課金なしで、対象の全機能をご利用いただけます。",
-  },
-};
-// =========================================================
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const argv = process.argv.slice(2);
+const EXECUTE = argv.includes("--yes");
 
-const BASE = "https://api.appstoreconnect.apple.com";
-const EXECUTE = process.argv.includes("--yes");
-const appId = process.argv.find((a) => /^\d+$/.test(a));
-
-// ---- 認証（asc.mjs と同じ探索） ----
-function loadConfig() {
-  if (process.env.ASC_KEY_ID && process.env.ASC_ISSUER_ID && process.env.ASC_KEY_PATH) {
-    return {
-      keyId: process.env.ASC_KEY_ID,
-      issuerId: process.env.ASC_ISSUER_ID,
-      keyPath: path.resolve(process.env.ASC_KEY_PATH),
-    };
-  }
-  for (const f of [
-    path.join(process.cwd(), ".asc.json"),
-    path.join(os.homedir(), ".asc", "config.json"),
-    path.join(os.homedir(), ".asc.json"),
-  ]) {
-    if (!fs.existsSync(f)) continue;
-    const c = JSON.parse(fs.readFileSync(f, "utf8"));
-    const p = c.profiles ? c.profiles[c.default || Object.keys(c.profiles)[0]] : c;
-    if (p && p.keyId && p.issuerId && p.keyPath) {
-      const kp = path.isAbsolute(p.keyPath) ? p.keyPath : path.resolve(path.dirname(f), p.keyPath);
-      return { keyId: p.keyId, issuerId: p.issuerId, keyPath: kp };
-    }
-  }
-  throw new Error("認証情報が見つかりません（~/.asc/config.json）。");
+const APP = loadAppConfig(argv, HERE);
+const PLAN = APP.plan;
+if (!PLAN) {
+  console.error("設定に plan がありません（asc.config.json の plan を確認）。");
+  process.exit(1);
 }
-
-function b64url(x) {
-  return Buffer.from(x).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-function token() {
-  const cfg = loadConfig();
-  const now = Math.floor(Date.now() / 1000);
-  const h = b64url(JSON.stringify({ alg: "ES256", kid: cfg.keyId, typ: "JWT" }));
-  const p = b64url(JSON.stringify({ iss: cfg.issuerId, iat: now, exp: now + 1200, aud: "appstoreconnect-v1" }));
-  const key = crypto.createPrivateKey(fs.readFileSync(cfg.keyPath));
-  const sig = crypto.sign("sha256", Buffer.from(`${h}.${p}`), { key, dsaEncoding: "ieee-p1363" });
-  return `${h}.${p}.${b64url(sig)}`;
-}
-
-const TOK = token();
-async function api(method, endpoint, body) {
-  const res = await fetch(BASE + endpoint, {
-    method,
-    headers: { Authorization: `Bearer ${TOK}`, "Content-Type": "application/json" },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
-  if (!res.ok) {
-    const msg = json?.errors?.map((e) => `${e.status} ${e.title}: ${e.detail}`).join("\n") || text;
-    throw new Error(`${method} ${endpoint}\n${msg}`);
-  }
-  return json;
-}
+const appId = APP.appId;
 
 // ドライランの表示付き作成。既存なら作らない。
 async function ensure(label, findFn, createBody, createPath) {
@@ -114,10 +46,7 @@ async function ensure(label, findFn, createBody, createPath) {
 }
 
 async function main() {
-  if (!appId) {
-    console.error("使い方: node setup-iap.mjs <appId> [--yes]");
-    process.exit(1);
-  }
+  console.log(`設定: ${APP.path}`);
   console.log(`アプリ ${appId} の課金セットアップ ${EXECUTE ? "【実行】" : "【ドライラン：作成しません】"}\n`);
   const warnings = [];
 
@@ -164,11 +93,11 @@ async function main() {
     "/v1/subscriptions",
   );
 
-  // ===== 3. サブスクのローカライズ（日本語） =====
+  // ===== 3. サブスクのローカライズ =====
   if (!sub.dryRun) {
-    console.log("■ サブスク表示名（ja）");
+    console.log(`■ サブスク表示名（${PLAN.locale}）`);
     await ensure(
-      `subscription localization ja`,
+      `subscription localization ${PLAN.locale}`,
       async () => {
         const r = await api("GET", `/v1/subscriptions/${sub.id}/subscriptionLocalizations?limit=50`);
         return (r.data || []).find((l) => l.attributes.locale === PLAN.locale);
@@ -228,7 +157,7 @@ async function main() {
         console.log("  ✅ 無料トライアル作成");
       }
     } catch (e) {
-      warnings.push("サブスクの価格/トライアル（App Store Connect の画面で¥800とトライアル1週間を設定）");
+      warnings.push(`サブスクの価格/トライアル（App Store Connect の画面で¥${PLAN.subscription.targetYen}とトライアル${PLAN.subscription.trialDuration}を設定）`);
       console.log("  ⚠ 価格/トライアルで停止: " + (e.message || e).split("\n").slice(-1)[0]);
       console.log("    → 構造は出来ています。価格だけ後で画面設定でもOK（数十秒）。続行します…");
     }
@@ -253,7 +182,7 @@ async function main() {
   );
 
   if (!iap.dryRun) {
-    console.log("■ 買い切り表示名（ja）");
+    console.log(`■ 買い切り表示名（${PLAN.locale}）`);
     // GET の関係パスが弾かれるので、直接POSTして重複はエラーで判定する。
     try {
       await api("POST", "/v1/inAppPurchaseLocalizations", {
@@ -263,12 +192,12 @@ async function main() {
           relationships: { inAppPurchaseV2: { data: { type: "inAppPurchases", id: iap.id } } },
         },
       });
-      console.log("  ✅ 作成: IAP localization ja");
+      console.log(`  ✅ 作成: IAP localization ${PLAN.locale}`);
     } catch (e) {
       const m = (e.message || "").toString();
-      if (/already|duplicate|409/i.test(m)) console.log("  ✓ 既存: IAP localization ja");
+      if (/already|duplicate|409/i.test(m)) console.log(`  ✓ 既存: IAP localization ${PLAN.locale}`);
       else {
-        warnings.push("買い切りの表示名(ja)（画面で設定）");
+        warnings.push("買い切りの表示名（画面で設定）");
         console.log("  ⚠ 表示名で停止: " + m.split("\n").slice(-1)[0]);
       }
     }
@@ -312,7 +241,7 @@ async function main() {
       const m = (e.message || "").toString();
       if (/already|exist/i.test(m)) console.log("  ✓ 既に価格設定あり");
       else {
-        warnings.push("買い切りの価格（画面で¥2,500を設定）");
+        warnings.push(`買い切りの価格（画面で¥${PLAN.lifetime.targetYen}を設定）`);
         console.log("  ⚠ 買い切り価格で停止: " + m.split("\n").slice(-1)[0]);
       }
     }

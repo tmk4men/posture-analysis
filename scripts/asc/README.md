@@ -58,6 +58,41 @@ asc apps --profile clientB     # アカウント切替
 
 最初の疎通は **`asc apps`**。appId が分かれば以降のコマンドに使える。
 
+## 5. 新しいアプリの課金＆掲載文を一発で入れる（アプリ別設定ファイル方式）
+
+`setup-iap.mjs` と `setup-metadata.mjs` は **スクリプト本体を編集しません**。
+アプリ固有の値（appId・課金プラン・掲載文・URL）は **`asc.config.json` 1枚**に書き、それを渡すだけ。
+
+```bash
+# 新アプリの手順
+cp scripts/asc/asc.config.example.json  ./asc.config.json   # 雛形をコピー
+#  → asc.config.json を編集（appId / plan / copy / urls.baseUrl）
+
+node scripts/asc/setup-iap.mjs      ./asc.config.json          # 課金：ドライラン
+node scripts/asc/setup-iap.mjs      ./asc.config.json --yes    # 課金：作成
+node scripts/asc/setup-metadata.mjs ./asc.config.json          # 掲載文：ドライラン
+node scripts/asc/setup-metadata.mjs ./asc.config.json --yes    # 掲載文：反映
+```
+
+- 実行フォルダに `asc.config.json` を置けば **パス省略可**（`setup-iap.mjs --yes` だけでOK）。
+- `npm link` 済みなら `asc-setup-iap ./asc.config.json --yes` のように短く呼べる。
+- **appId だけ差し替えたい**ときは数字の引数で上書き： `... ./asc.config.json 1234567890`。
+- `urls.baseUrl` を1つ書けば、掲載文中の `${PRIVACY_URL}` / `${TERMS_URL}` / `${SUPPORT_URL}` が自動展開される。
+- この姿勢アプリ自身の設定は `asc.config.postura.json`（コピー元の実例として参照可）。
+
+### asc.config.json の中身（要点）
+| キー | 用途 |
+|---|---|
+| `appId` | 対象アプリのID（`asc apps` で確認）。数字引数でも上書き可 |
+| `locale` | 掲載文・課金ローカライズのロケール（既定 `ja`） |
+| `category` | 主カテゴリ（例 `HEALTH_AND_FITNESS`）。無指定でスキップ |
+| `urls.baseUrl` | 法務ページ配信元。privacy/terms/support URL を自動生成 |
+| `urls.contactEmail` | 審査連絡先メール |
+| `plan.subscription` / `plan.lifetime` | 課金の productId・名前・価格(円)・トライアル |
+| `copy.*` | subtitle / promotionalText / keywords / whatsNew / reviewNotes / description |
+
+> `asc.config.json` に **秘密情報は入れない**（掲載文と価格だけ）。秘密鍵は従来どおり `~/.asc/`。
+
 ## セキュリティ
 
 - `.p8` と `.asc.json` / `config.json` は **絶対にコミットしない**（リポジトリ側は `.gitignore` 済み。
